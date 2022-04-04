@@ -1,0 +1,204 @@
+---
+title: "59_Statistical_Inference"
+author: "Bakro"
+date: "1/5/2022"
+output: rmdformats::readthedown 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Simulation To Verify Central Limit Theorem On Exponential Distribution
+
+This project investigates the exponential distrbution and uses it to verify the central limit theorem. A thousand simulations are run each with 40 samples taken from an exponential distribution with rate parameter lambda = 0.2. Theoretical means and variances of the sample means is compared with the observed values and normality of the distribution is checked.
+
+## Simulations
+
+40 random samples were drawn from an exponential distribution with rate parameter 0.2 using the rexp(n,lambda) function. The mean of each sample was taken and a vector of samples means was constructed for further analysis.
+
+```{r}
+set.seed(2)
+no_Of_Simulations = 1000
+n = 40
+lambda = 0.2
+means = NULL
+for(i in 1:no_Of_Simulations)
+{
+  sample = rexp(n,lambda)
+  means = c(means,mean(sample))
+}
+```
+
+## Comparison Of Mean Of Sample Mean To Theoretical Mean
+
+According to CLT, the mean of sample means is normally distributed with mean equal to the actual theoretical mean of the original distribution. Thus, mean of samples means is expected to be equal to the theoretical mean of 1/lambda.
+
+```{r}
+hist(means,main='Distribution Of Sample Means',xlab='Sample Mean',col='blue')
+abline(v=1/lambda,col='black',lwd=3)
+abline(v=mean(means),col='grey',lwd=3)
+legend(x='topright',col=c('black','grey'),legend=c("Theoretical Mean","Observed Mean"),lwd=3)
+```
+
+### Comparison
+
+```{r}
+# Theoretical Mean
+m1 = 1/lambda
+print(m1)
+# Observed Mean
+m2 = mean(means)
+print(m2)
+# Absolute Difference
+adiff = abs(m1 - m2)
+print(adiff)
+
+```
+
+-   We can see that the theoretical and observed values are very close to each other.
+
+**Comparison Of Variance Of Sample Mean To Theoretical Variance**
+
+According to CLT, the mean of sample means is normally distributed with standard deviation equal to the actual theoretical standard deviation of the original distribution divided by the square root of the sample size. Thus, variance of samples means is expected to be equal to the theoretical variance of 1/(lambda x lambda x 40).
+
+```{r}
+# Compare Variance Of Sample Means To Theoretical Variance
+# Theoretical Variance
+v1 = (1/(lambda*lambda*n))
+print(v1)
+# Observed Variance
+v2 = var(means)
+print(v2)
+# Absolute Difference
+adiff = abs(v1-v2)
+print(adiff)
+```
+
+-    We can see that the theoretical and observed values are very close to each other.
+
+## Approximate Normality Verification
+
+We will plot a histogram of the sample means and overlay that with the theoretical normal distribution that is with mean (1/lambda) and variance 1/(lamda x lambda x 40).
+
+```{r}
+# Showing Approximate Normality
+hist(means,main='Distribution Of Sample Means',xlab='Sample Mean',col='blue',prob=T)
+x = seq(-3,8,0.1)
+y = dnorm(x,mean=m1,sd=sqrt(v1))
+lines(x,y,lwd=3)
+```
+
+We can see from the plot that the distribution of sample means is approximately normal with the theoretical values of mean and standard deviation.
+
+## Conclusion
+
+Based on the above results, we can see that the theoretical mean and variance of the sample means matches the observed values and also that the distribution of the observed sample means is approximately normal.
+
+
+
+
+```{r}
+library(tidyverse)
+```
+# Inferential Data Analysis 
+relationship between tooth length growth 
+and the dose and supplement given to them.
+
+## explore Data
+
+```{r }
+df <- ToothGrowth
+summary(df)
+# skimr::skim(df)
+# df %>% group_by(dose) %>% skimr::skim() 
+#df %>% group_by(supp) %>% skimr::skim() 
+#df %>% group_by(supp,dose) %>% skimr::skim() 
+```
+```{r}
+
+ggplot(data = df) + geom_boxplot(aes(x =factor(dose), y= len , fill =supp))  
+
+```
+```{r}
+ggplot(data = df ,aes(x= dose ,y=len ,col = supp)) + 
+  geom_point() +
+  geom_smooth(method = lm)
+```
+
+Tooth length seems to be higher overall for Orange Juice as compared to Vitamin 
+C, but there is not a major difference. Furthermore, for both types of
+supplements, it seems that tooth length increases with the dose amount.
+Also, for a dose of 0.5 and 1.0 mg/day, tooth length seems to be less for
+Vitamin C than Orange Juice, but for a higher dose of 2.0 mg/day there
+doesn't seem to be much difference. We will test these claims using t-tests.
+
+
+
+
+
+
+
+
+### Hypothesis 1
+Does Tooth Length vary with dose amount for Orange Juice?
+
+```{r}
+# Does Tooth Length vary with Dose for Orange Juice?  
+df2 = df[df$supp=="OJ" & df$dose %in% c(0.5,1.0),]
+t.test(len ~ dose, data = df2, var.equal=FALSE, paired = FALSE, alternative="greater")
+df2 = df[df$supp=="OJ" & df$dose %in% c(1.0,2.0),]
+t.test(len ~ dose, data = df2, var.equal=FALSE, paired = FALSE, alternative="greater")
+```
+We see that the p-value is greater than 0.05 in both cases. 
+The null hypothesis that for Orange Juice, Tooth Length is 
+less for 0.5 mg/day dose than that for 1.0 mg/day and growth
+for 1.0 mg/day is less than that of 2.0 mg/day, cannot be rejected. 
+
+
+### Hypothesis 2
+Does Tooth Length vary with dose amount for Vitamin C?
+```{r}
+# Does Tooth Length vary with Dose for Vitamin C?  
+df2 = df[df$supp=="VC" & df$dose %in% c(0.5,1.0),]
+t.test(len ~ dose, data = df2, var.equal=FALSE, paired = FALSE, alternative="greater")
+df2 = df[df$supp=="VC" & df$dose %in% c(1.0,2.0),]
+t.test(len ~ dose, data = df2, var.equal=FALSE, paired = FALSE, alternative="greater")
+```
+same thing 
+
+
+### Hypothesis 3
+Does Tooth Length vary with just Supplement Type?
+```{r}
+# Does Tooth Length vary with just supplement type?
+
+t.test(len ~ supp, data = df, var.equal=FALSE, paired = FALSE)
+```
+
+
+
+### Hypothesis 4
+Does Tooth Length vary with supplmenet type for particular dose amounts?
+```{r}
+# Does Tooth Length vary with supplement type for Dose of 0.5
+df2 = df[df$dose %in% c(0.5),]
+t.test(len ~ supp, data = df, var.equal=FALSE, paired = FALSE,alternative="less")
+# Does Tooth Length vary with supplement type for Dose of 1.0
+df2 = df[df$dose %in% c(1.0),]
+t.test(len ~ supp, data = df, var.equal=FALSE, paired = FALSE,alternative="less")
+# Does Tooth Length vary with supplement type for Dose of 2.0
+df2 = df[df$dose %in% c(2.0),]
+t.test(len ~ supp, data = df, var.equal=FALSE, paired = FALSE)
+```
+p-values for all the tests are greater than 0.50. 
+The null hypothesis that the Tooth Length is greater in the case of Orange Juice
+for a dose of 0.5 and 1.0 mg/day cannot be rejected. Similarly, the null 
+hypothesis that mean Tooth Length is equal for Orange Juice and Vitaminc C
+for a dose of 2.0 mg/day cannot be rejected.
+
+## conclusion
+For each supplement individually, increase in dose increases the tooth length.
+Overall, there is no statistical significant difference between orange juice and
+vitamin C. However, for 0.5 mg/day and 1.0 mg/day dose orange juice gives longer
+tooth length but for 2.0 mg/day there is no statistically significant difference.

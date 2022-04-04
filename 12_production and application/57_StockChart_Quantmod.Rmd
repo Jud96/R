@@ -1,0 +1,119 @@
+---
+title: "Untitled"
+author: "Bakro"
+date: "11/28/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(quantmod)
+library(PerformanceAnalytics)
+library(RColorBrewer)
+library(tseries)
+library(lubridate)
+library(Quandl)
+Quandl.api_key("zrcB2Ejv9UmvhPCUsy2_")
+
+
+```
+
+
+#Review of last Project (i.e., Ad, Cl, getsymbols, etc.)
+
+```{r}
+msft <- getSymbols("MSFT",auto.assign = F)
+head(msft)
+tsla <- getSymbols("TSLA",auto.assign = F)
+tsla_daily_return <- dailyReturn(tsla$TSLA.Adjusted)
+head(tsla_daily_return)
+```
+
+
+
+# Charting
+
+#Line Graph
+
+```{r}
+chartSeries(msft,
+            type = "line",
+            subset = "2013",
+            theme = chartTheme("white"))
+
+chartSeries(msft,
+            type = "bar",
+            subset = "2013",
+            theme = chartTheme("white"))
+
+
+chartSeries(msft,
+            type = "candlesticks",
+            subset = "2013",
+            theme = chartTheme("white"))
+
+chartSeries(msft,
+            type = "auto",
+            subset = "2007-05-10::2007-10-10",
+            theme = chartTheme("white"))
+```
+
+
+Bollinger Bands
+
+```{r}
+chartSeries(msft,
+            type = "auto",
+            subset = "2007",
+            TA= "addBBands(n=20,sd=2)",
+            theme = chartTheme("white"))
+```
+
+
+Relative strength index (RSI)
+
+```{r}
+chartSeries(msft,
+            type = "auto",
+            subset = "2007",
+            TA= c(addBBands(n=20,sd=2),addRSI()),
+            theme = chartTheme("white"))
+```
+
+Expontial MOving Average
+
+
+```{r}
+chartSeries(msft,
+            type = "auto",
+            subset = "2007",
+            TA= c(addBBands(n=20,sd=2),addRSI(),addEMA(n=30) ,addMACD()),
+            theme = chartTheme("white"))
+```
+
+
+
+
+
+Question 1
+What does the getsymbols() function return?
+Returns the stock data for user defined stock symbol.
+
+
+What does the function dailyreturn() do?
+Returns the daily returns for adjusted closing price of a stock.
+
+Question 4
+What is a Bollinger Band?
+Bollinger Bands consist of a centerline and two price channels (bands) above and below it. The centerline is an exponential moving average; the price channels are the standard deviations of the stock being studied. The bands will expand and contract as the price action of an issue becomes volatile (expansion) or becomes bound into a tight trading pattern (contraction).  
+
+
+
+Question 6
+How is an EMA calculated?
+use a weighted average that gives greater importance to more recent days to make it more responsive to new information.  

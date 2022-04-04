@@ -1,0 +1,152 @@
+---
+title: "24_data_mining_association"
+author: "Bakro"
+date: "1/2/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Association Rule Mining
+
+Association rules: apriori(), eclat() in package arules I Sequential patterns: arulesSequence I Visualisation of associations: arulesViz Function apriori()
+
+Mine frequent itemsets, association rules or association hyperedges using the Apriori algorithm. The Apriori algorithm employs level-wise search for frequent itemsets. Default settings: I minimum support: supp=0.1 I minimum confidence: conf=0.8 I maximum length of rules: maxlen=10
+
+```{r}
+# The Titanic Dataset
+
+load("./data/titanic.raw.rdata")
+dim(titanic.raw)
+## [1] 2201 4
+idx <- sample(1:nrow(titanic.raw), 8)
+titanic.raw[idx, ]
+
+# find association rules with the APRIORI algorithm
+library(arules)
+rules <- apriori(titanic.raw, control=list(verbose=F),
+parameter=list(minlen=2, supp=0.005, conf=0.8),
+appearance=list(rhs=c("Survived=No", "Survived=Yes"),
+
+default="lhs"))
+
+# sort rules
+quality(rules) <- round(quality(rules), digits=3)
+rules.sorted <- sort(rules, by="lift")
+# have a look at rules
+inspect(rules.sorted)
+#Rule #2 provides no extra knowledge in addition to rule #1,
+#since rules #1 tells us that all 2nd-class children survived.
+#I When a rule (such as #2) is a super rule of another rule (#1)
+#and the former has the same or a lower lift, the former rule
+#(#2) is considered to be redundant.
+#I Other redundant rules in the above result are rules #4, #7
+# and #8, compared respectively with #3, #6 and #5.
+
+
+print(" Remove Redundant Rules ")
+## find redundant rules
+subset.matrix <- is.subset(rules.sorted, rules.sorted)
+subset.matrix[lower.tri(subset.matrix, diag = T)] <- NA
+redundant <- colSums(subset.matrix, na.rm = T) >= 1
+
+## which rules are redundant
+which(redundant)
+
+## remove redundant rules
+rules.pruned <- rules.sorted[!redundant]
+
+## Remaining Rules
+inspect(rules.pruned)
+
+## interrupt result 
+#Did children have a higher survival rate than adults?
+#I Did children of the 2nd class have a higher survival rate than
+#other children?
+# Did children have a higher survival rate than adults?
+# Did children of the 2nd class have a higher survival rate than
+#other children?
+# The rule states only that all children of class 2 survived, but
+#provides no information at all about the survival rates of other
+#classes.
+
+
+
+# viZ
+library(arulesViz)
+# plot(rules.all)
+
+plot(rules.sorted, method = "grouped")
+
+plot(rules.sorted, method = "graph", control = list(type = "items"))
+
+plot(rules.sorted, method = "paracoord", control = list(reorder = T))
+
+```
+
+### Association Rules
+
+Association rules are rules presenting association or correlation between itemsets.\
+support(A ⇒ B) = P(A ∪ B)\
+confidence(A ⇒ B) = P(B\|A) =P(A ∪ B)/P(A)\
+lift(A ⇒ B) = confidence(A ⇒ B)/P(B)=P(A ∪ B)/P(A)P(B)\
+
+### Interestingness Measures
+
+-   Which rules or patterns are the most interesting ones? One way is to rank the discovered rules or patterns withinterestingness measures.\
+
+-   The measures of rule interestingness fall into two categories,subjective and objective[Freitas, 1998, Silberschatz and Tuzhilin, 1996].\
+
+-   Objective measures, such as lift, odds ratio and conviction,are often data-driven and give the interestingness in terms of statistics or information theory.\
+
+-   Subjective (user-driven) measures, e.g., unexpectedness and actionability, focus on finding interesting patterns by\
+    matching against a given set of user beliefs.
+
+```{r}
+# https://www.kirenz.com/post/2020-05-14-r-association-rule-mining/
+# create a list of baskets
+market_basket <-  
+  list(  
+  c("apple", "beer", "rice", "meat"),
+  c("apple", "beer", "rice"),
+  c("apple", "beer"), 
+  c("apple", "pear"),
+  c("milk", "beer", "rice", "meat"), 
+  c("milk", "beer", "rice"), 
+  c("milk", "beer"),
+  c("milk", "pear")
+  )
+
+# set transaction names (T1 to T8)
+names(market_basket) <- paste("T", c(1:8), sep = "")
+
+# packages
+library(arules)
+library(arulesViz)
+
+trans <- as(market_basket, "transactions")
+dim(trans)
+itemLabels(trans)
+summary(trans)
+image(trans)
+itemFrequencyPlot(trans, topN=10,  cex.names=1)
+
+#Min Support 0.3, confidence as 0.5.
+rules <- apriori(trans, 
+                 parameter = list(supp=0.3, conf=0.5, 
+                                  maxlen=10, 
+                                  target= "rules"))
+
+summary(rules)
+inspect(rules)
+
+# Viz
+plot(rules)
+plot(rules, measure = "confidence")
+plot(rules, method = "two-key plot")
+subrules <- head(rules, n = 10, by = "confidence")
+
+plot(subrules, method = "graph",  engine = "htmlwidget")
+```

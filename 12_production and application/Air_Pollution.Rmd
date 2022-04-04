@@ -1,0 +1,472 @@
+---
+title: "Air_pollution"
+author: "Bakro"
+date: "10/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{html}
+<style>
+
+div.red { background-color:#ff00ff; border-radius: 5px; padding: 20px;}
+div.green { background-color:#00ff00; border-radius: 5px; padding: 20px;}
+span.tag {color:crimson; border-radius: 10px; font-weight: bold;
+background: #5bc0de88 ;padding: 5px; }
+</style>
+```
+</style>
+
+# Air pollution
+
+**tags:** [importing data]{.tag} [protected /test case]{.tag} [handlingerror]{.tag} [optimize reading file]{.tag} [deal with multifiles]{.tag} [documentation]{.tag}
+
+[dataframe]{.tag} [optimize memory]{.tag} [dp algorithm]{.tag} [control statement]{.tag} [debug]{.tag} [test]{.tag} [missingvalues]{.tag} [profoling]{.tag} [loops]{.tag}
+
+::: {.alert .alert-block .alert-info style="font-size:14px; font-family:verdana; line-height: 1.7em;"}
+📌   in this tutorial we will go from worse situation where we can detect errors and debug with bad performance for memory and time to good situation (especially when you use this fun more and more) but when you use this app for only time it's not a big deal to find optimizing solution
+
+i have made some bugs for this tutorial
+:::
+
+## skim your app:
+
+write algorithms that achieve your work than divide your problem to many
+
+small problems that connect together (divide and conquer ) easier to test and read ...
+
+(add function and add comments to this function and than try to convert this to code)
+
+```{r eval=FALSE}
+# this function find mean of  pollution depend on his type during 
+# period of time (ids of files)
+
+# params 
+# directory : where do you find data ?
+# pollutant : pollution art (sulfate/nitrate)
+# id : contain id of files that will be monitor 
+
+pollutantmean0 <- function(directory, pollutant ,  id = 1:332){
+  # check data 
+
+  # combine files
+  
+  # find mean  drop NA
+  
+  
+} # end function polluntantmean 
+```
+
+## Version1
+
+```{r eval=FALSE}
+pollutantmean1 <- function(directory, pollutant ,  id = 1:332){
+  # check data 
+  if(missing(directory) ) stop("you should write directory")
+  if(missing(pollutant) ) stop("you should write pollutant")
+  if (pollutant != sulfate | pollutant != nitrate){ 
+    stop("pollutant should be sulfate or nitrate")
+  }
+  # check numbers if in range 1 to 332
+  
+} # end function polluntantmean 
+
+#  group1 
+pollutantmean0("specdata","sulfate",1)
+pollutantmean0("df","sulfate",1)
+#  group2 
+pollutantmean0("specdata","sulfate",1)
+pollutantmean0("specdata","nitrate",1)
+pollutantmean0("specdata","cbb",1)
+# group3 
+pollutantmean0("specdata","sulfate",-1)  # negative value
+pollutantmean0("specdata","sulfate",-1:-3)  # range negative value
+pollutantmean0("specdata","sulfate",c(1,0))
+pollutantmean0("specdata","sulfate",c(1,-5))
+pollutantmean0("specdata","sulfate",c(1:10))
+pollutantmean0("specdata","sulfate",c(1,5))
+pollutantmean0("specdata","sulfate",c(-5,5))
+pollutantmean0("specdata","sulfate",c(320:335))
+
+
+## make test situation in this stage verify your code 
+## easier to find bug when you have error it is easier to fix 
+#if (pollutant != "sulfate" & pollutant != "nitrate")
+```
+
+## Version2
+
+```{r eval=FALSE}
+pollutantmean0 <- function(directory, pollutant ,  id = 1:332){
+  # check data 
+
+  # define df
+  # over a loop 
+  # read file 
+  # what happened if this file not existed 
+  # detect classes of this table so that you can read quicker next time (only one)
+  # combine data to df 
+   data <- data.frame()
+  firsttime <- TRUE
+  # read file  1>> 001  , 91 >> 091 
+    # directory <- "specdata"
+    # numfile <- formatC(ind,width = 3,flag = "0")
+    # vcFile <- paste(getwd() ,"/data/",directory,"/", numfile , ".csv", sep = "")
+    # read.csv(vcFile)
+  for (ind in id) {
+    numfile <- formatC(ind,width = 3,flag = "0")
+    vcFile <- paste(getwd() ,"/data/",directory,"/", numfile , ".csv", sep = "")
+    # check if file exists
+    if(!file.exists(vcFile)){
+      warning(paste(vcFile , "this file doesn't esist"))
+      next
+    }
+    # open connection 
+    con <- file(vcFile,"r") 
+    if(firsttime){
+      temp <- read.csv(con)
+      classes <- sapply(temp,class)
+    }else{
+      temp <- read.csv(con,colClasses = classes)
+    }
+    
+    close(con)
+    # combine data
+    if(colnames(data) == colnames(temp)){
+      data <- rbind(data,temp)} else{
+        warning(paste(vcFile,"have another columns"))
+      }
+    
+  } # end for 
+  print("------------------------")
+  
+  mean <-  data %>%
+    summarise(mean(.data[[pollutant]],na.rm =TRUE))
+  return(paste(mean))
+  print("------------------------")
+  
+  
+} # end function polluntantmean
+
+
+pollutantmean0("specdata","sulfate",1)
+debug(pollutantmean0)
+# 3-  apply  instead of tapply 
+# 4-  sapply/lapply instead of tapply
+# 5-  Error in if (colnames(data) == colnames(temp)) { : 
+      #argument is of length zero
+# 6-  is.null(data) doesn't work
+```
+
+## version3
+
+```{r}
+pollutantmean_v3 <- function(directory, pollutant ,id = 1:332){
+  # check data 
+  if(missing(directory) ) stop("you should write directory")
+  if(missing(pollutant) ) stop("you should write pollutant")
+  if (pollutant != "sulfate" & pollutant != "nitrate"){
+    stop("pollutant should be sulfate or nitrate")
+  }
+  # check range of files 
+  data <- NULL  # data <- data.frame()
+  firsttime <- TRUE
+for (ind in id) {
+    numfile <- formatC(ind,width = 3,flag = "0") # sprintf("%03d", monitor)
+    vcFile <- paste(getwd() ,"/data/",directory,"/", numfile , ".csv", sep = "")
+    # check if file exists
+    if(!file.exists(vcFile)){
+      warning(paste(vcFile , "this file doesn't esist"))
+      next
+    }
+    # open connection 
+    con <- file(vcFile,"r") 
+    if(firsttime){
+      temp <- read.csv(con)
+      classes <- lapply(temp,class)
+      data <- temp
+      firsttime <- FALSE
+      close(con)
+      next
+    }else{
+      temp <- read.csv(con,colClasses = classes)
+     #temp <- read.csv(con) #  comment 2
+      #temp<- fread(vcFile)
+    }
+    
+    close(con)
+    # combine data
+    
+    if(identical(colnames(data) , colnames(temp)) ){ # !is.null(data) &
+    data <- rbind(data,temp)} else{
+      warning(paste(vcFile,"have another columns"))
+    }
+      
+} # end for 
+print("------------------------")
+
+  mean <-  data %>%
+    summarise(mean(.data[[pollutant]],na.rm =TRUE))
+  return(paste(mean))
+  print("------------------------")
+
+  
+} # end function polluntantmean
+pollutantmean("specdata","sulfate",1:10)
+# group3 
+pollutantmean("specdata","sulfate",-1)  # negative value
+pollutantmean("specdata","sulfate",-1:-3)  # range negative value
+pollutantmean("specdata","sulfate",c(1,0))
+pollutantmean("specdata","sulfate",c(1,-5))
+pollutantmean("specdata","sulfate",c(1:10))
+pollutantmean("specdata","sulfate",c(1,5))
+pollutantmean("specdata","sulfate",c(-5,5))
+pollutantmean("specdata","sulfate",c(320:335))
+#what happened if we haven't deal with missing values ?
+debug(pollutantmean)
+undebug(pollutantmean)
+```
+
+## Version4
+
+```{r}
+pollutantmean_v4<- function(directory, pollutant ,id = 1:332){
+  # check data 
+  if(missing(directory) ) stop("you should write directory")
+  if(missing(pollutant) ) stop("you should write pollutant")
+  if (pollutant != "sulfate" & pollutant != "nitrate"){
+    stop("pollutant should be sulfate or nitrate")
+  }
+  
+  
+  tryCatch(
+    {
+      # check range of files 
+      data <- NULL  # data <- data.frame()
+      firsttime <- TRUE
+      for (ind in id) {
+        numfile <- formatC(ind,width = 3,flag = "0") # sprintf("%03d", monitor)
+        vcFile <- paste(getwd() ,"/data/",directory,"/", numfile , ".csv", sep = "")
+        # check if file exists
+      
+        # open connection 
+        con <- file(vcFile,"r") 
+        if(firsttime){
+          temp <- read.csv(con)
+          classes <- lapply(temp,class)
+          data <- temp
+          firsttime <- FALSE
+          close(con)
+          next
+        }else{
+          #temp <- read.csv(con,colClasses = classes)
+          temp <- read.csv(con)
+        }
+        
+        close(con)
+        # combine data
+        
+        if(identical(colnames(data) , colnames(temp)) ){ # !is.null(data) &
+          data <- rbind(data,temp)} else{
+            warning(paste(vcFile,"have another columns"))
+          }
+        
+      } # end for 
+    }, # end trycatch exp
+    error = function(e) {errorCondition("errror: ", e)},
+    warning = function(w) {warning("Warning : ", w)}, 
+    finally = { cat("finally  \n") }
+  )
+ 
+  print("------------------------")
+  
+  mean <-  data %>%
+    summarise(mean(.data[[pollutant]],na.rm =TRUE))
+  return(paste(mean))
+  print("------------------------")
+  
+  
+} # end function polluntantmean
+pollutantmean_v4("specdata","sulfate",-1)  # negative value
+pollutantmean_v4("specdata","sulfate",-1:-3)  # range negative value
+pollutantmean_v4("specdata","sulfate",c(1,0))
+pollutantmean_v4("specdata","sulfate",c(1,-5))
+pollutantmean_v4("specdata","sulfate",c(1:10))
+pollutantmean_v4("specdata","sulfate",c(1,5))
+pollutantmean_v4("specdata","sulfate",c(-5,5))
+pollutantmean_v4("specdata","sulfate",c(320:335))
+
+# what difference between trycatch and control statements 
+# when we use try catch 
+```
+
+## Version5
+
+```{r}
+pollutantmean_v5 <- function(directory, pollutant ,id = 1:332){
+  # check data
+  
+  
+  # define vector that include values(!missing ) 
+  means <- c()
+  
+  for(monitor in id){
+    # get path with standard format 00x,0xx,xxx
+    path <- paste(getwd(), "/data/", directory, "/", sprintf("%03d", monitor), ".csv", sep = "")
+    # read file 
+    monitor_data <- read.csv(path)
+   
+    # select interested data
+    interested_data <- monitor_data[pollutant]
+    # remove missing value and add it to vector
+    means <- c(means, interested_data[!is.na(interested_data)])
+  }
+  # calculate mean 
+  mean(means)
+  
+} # end function polluntantmean 
+```
+
+## Version6
+
+```{r}
+# first time (10,20) (20,30)
+result <- data.frame(filenumber= integer(),Avg =numeric())
+pollutantmean_v6 <- function(directory , pollutant ,id = 1:332){
+
+  # ind <- 1
+  # directory = "specdata"
+  # pollutant ="sulfate"
+   means <- c()
+  for (ind in id) {
+    path <- paste(getwd(), "/data/", directory, "/",  sprintf("%03d", ind)
+                  , ".csv", sep = "")
+    data <- read.csv(path)
+    interested_data <-  data[pollutant] 
+    mean <-  mean(interested_data[!is.na(interested_data)])
+    result <<- rbind(result,data.frame(filenumber =ind,Avg = mean))
+  } # end for
+
+} # end function 
+pollutantmean_v6("specdata","sulfate",c(1:10))
+result
+undebug(pollutantmean04)
+   pollutantmean04("specdata","sulfate",c(1,5))  
+```
+
+## profling
+
+```{r}
+Rprof(line.profiling=TRUE)
+pollutantmean04("specdata", "sulfate")
+ Rprof(NULL)
+ summaryRprof()
+```
+
+## performance
+
+[time]{.tag} [memory]{.tag} [accuracy]{.tag} [ui]{.tag} [services]{.tag}
+
+### V3
+
+```{r}
+# v3
+# reading with & without colnames
+ start <- proc.time()
+ pollutantmean_v3("specdata", "sulfate")
+ end <- proc.time()
+ print(end - start)
+# user  system elapsed 
+# 11.09    3.03   14.31 
+# user  system elapsed  without 
+# 10.35    3.12   13.68
+library(data.table) 
+ # in this example it's not a big deal (9.58 ,2.95,12.90)
+ # than where most time go ? merge data 
+ 
+```
+
+### V5
+
+```{r}
+ start <- proc.time()
+ pollutantmean_v5("specdata", "sulfate")
+ end <- proc.time()
+ print(end - start)
+# user  system elapsed 
+# 1.03    0.09   1.21 
+
+```
+
+V6
+
+```{r}
+ start <- proc.time()
+ pollutantmean_v6("specdata", "sulfate")
+ end <- proc.time()
+ print(end - start)
+# user  system elapsed 
+# 1.03    0.09   1.28
+ # but when you will have 
+ mean(result[1:332,2])
+```
+
+## complete
+
+```{r}
+# pollutantmean(directory, pollutant,id = 1:332)
+complete <- function(directory, id = 1:10){
+  results <- data.frame(id=numeric(0), nobs=numeric(0))
+  for (ind in id) {
+    numfile <- formatC(ind,width = 3,flag = "0")
+    vcFile <- paste(getwd() ,"/data/",directory,"/", numfile , ".csv", sep = "")
+    # open connection 
+    con <- file(vcFile,"r")
+    temp <- read.csv(con)
+    close(con)
+    
+    co <-  temp %>% 
+      filter(!is.na(sulfate) & !is.na(nitrate)) %>%
+      count()
+    #print(paste( numfile ," ", co , " \n"))
+    results <- rbind(results, data.frame(id=ind, nobs=co))
+  } # end for 
+  return(results) 
+  
+  
+} # end function polluntantmean 
+```
+
+## correlation
+
+```{r}
+# cor between two factors
+corr <- function(directory,threshold =0){
+  #data <- data.frame()
+  correlation <- NULL
+  
+  for (ind in 1:332) {
+    numfile <- formatC(ind,width = 3,flag = "0")
+    vcFile <- paste(getwd() ,"/data/",directory,"/", numfile , ".csv", sep = "")
+    # open connection 
+    con <- file(vcFile,"r")
+    temp <- read.csv(con)
+    close(con)
+    
+    temp<-  temp %>% 
+      filter(!is.na(sulfate) & !is.na(nitrate)) 
+    if(nrow(temp) > threshold)
+      correlation <- c(correlation,cor(temp$sulfate,temp$nitrate))
+    
+  } # end for 
+  return(correlation)
+} 
+cr <- corr(vcDir)
+summary(cr)
+
+
+
+```

@@ -1,0 +1,207 @@
+---
+title: "Machine_Learning_project"
+author: "Bakro"
+date: "11/12/2021"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement -- a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: <http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har> (see the section on the Weight Lifting Exercise Dataset).
+
+## Data
+
+The training data for this project are available here:
+
+[[https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv]{.ul}](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+
+The test data are available here:
+
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv>
+
+```{r}
+library(data.table)
+library(skimr)
+library(lattice)
+library(ggplot2)
+library(caret)
+library(kernlab)
+library(rattle)
+
+
+# download.file(url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv" , destfile = "./data/pml_training.csv" , method = "curl")
+pml_training <- fread("./data/pml-training.csv")
+
+# download.file(url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv" , destfile = "./data/pml_testing" ,method = "curl")
+pml_testing <- fread("./data/pml-testing.csv")
+
+```
+
+```{r}
+
+# structure of data 
+# skim_without_charts(pml_training)
+# missing values in our data 
+# propNAs <- colMeans(is.na(pml_training))
+# table(propNAs)
+# unnecessary data selecetion interested data for this project  
+# remove columns
+pml_training <- pml_training[,-c(1:7)]
+pml_testing <- pml_testing[,-c(1:7)]
+EmptyCols <- which(colSums(is.na(pml_training) |pml_training=="")>0.9*dim(pml_training)[1]) 
+
+pml_training <- pml_training[,-..EmptyCols]
+pml_testing <- pml_testing[,-..EmptyCols]
+pml_training$classe <- as.factor(pml_training$classe)
+
+# do same thing with testing data
+pml_testing$classe <- as.factor(pml_testing$classe)
+```
+
+## Data slicing
+
+```{r}
+inTrain <- createDataPartition(y = pml_training$classe, p = 0.7, list = FALSE)
+
+training <- pml_training[inTrain, ]
+
+crossval <- pml_training[-inTrain, ]
+
+
+```
+
+## Preprocessing Data
+
+```{r}
+# Removing Zero Covariates
+t <- nearZeroVar(training,saveMetrics=TRUE)
+# when nzv = TRUE, those variables should be thrown out
+# take indices of nzv = false 
+indices <- which(!t$nzv)
+training <- training[, ..indices ]
+crossval <- crossval[, ..indices ]
+# do same thing with testing data
+pml_testing <- pml_testing[, ..indices ]
+
+index_of_outcome <- which(colnames(training) == "classe")
+# from skim we found there is missing values >> impute and standard data
+# create preProcess object for all predictors (index_of_output = outcome)
+preObj <- preProcess(training[,-..index_of_outcome],method=c("knnImpute","center","scale"))
+
+# apply preprocessing on  training set
+traindata <- predict(preObj,training[,-..index_of_outcome])
+traindata$classe <- training$classe
+# apply preprocessing on  cross validation 
+cvdata <- predict(preObj,crossval[,-..index_of_outcome])
+cvdata$classe <- crossval$classe
+# normalize test set using training parameters
+testdata <- predict(preObj,pml_testing)
+rm(pml_testing ,pml_training)
+```
+
+## modals
+### Decision Tree
+```{r}
+# set train control 
+control <- trainControl(method="cv", number=3, verboseIter=F)
+# first important thing our model is classification non linear model 
+table(traindata$classe)
+# Prediction with  Decision Tree
+Fit_decision_Tree <-train(classe ~ .,method="rpart",data=traindata ,trControl = control,                     tuneLength = 5)
+rattle::fancyRpartPlot(Fit_decision_Tree$finalModel)
+testPC <-  predict(Fit_decision_Tree ,cvdata[,-..index_of_outcome])
+
+# compare results
+mrpart <-confusionMatrix(cvdata$classe,testPC) # ACC : 0.6615 
+
+```
+### random_Forest
+```{r}
+# take sample and test on than take total data
+
+Fit_random_Forest <- train(classe ~ ., data = traindata, method = "rf" ,trControl = control, tuneLength = 5)
+testPC <-  predict(Fit_random_Forest ,cvdata[,-..index_of_outcome])
+mrf <- confusionMatrix(cvdata$classe,testPC) # ACC : 0.9997 
+
+# A generic method for calculating variable importance for objects produced by train and method specific meth
+# ?varImp
+vi <- varImp(Fit_random_Forest)$importance
+
+
+
+```
+### boosting for part of data
+```{r}
+## here i have apply boosting only for section of the data
+set.seed(100)
+sampling <- sample(nrow(traindata),100)
+
+
+
+# boosting 
+Fit_boosting <- train(classe ~ ., method="gbm",data=traindata[sampling,],verbose=FALSE
+                ,trControl = control, tuneLength = 5)
+
+testPC <-  predict(Fit_boosting ,cvdata[,-..index_of_outcome])
+mboosting <-confusionMatrix(cvdata$classe,testPC) # ACC : 0.9988
+```
+
+
+**S**upport **V**ector **M**achine
+
+```{r}
+
+mod_svm <- train(classe~., data=traindata, method="svmLinear", trControl = control, tuneLength = 5, verbose = F)
+pred_svm <- predict(mod_svm, cvdata)
+msvm <- confusionMatrix(pred_svm, factor(cvdata$classe))
+
+
+
+
+```
+
+## RESULTS
+
+```{r}
+# combine accuracy of this models 
+# compare between them 
+# i have take sampling for some models 
+models <- c("Tree", "Rf", "Gbm/boosting","SVM")
+accuracy <- round(c( mrpart$overall[1], mrf$overall[1], mboosting$overall[1] ,msvm$overall[1]),3) #accuracy
+oos_error <- 1 - accuracy #out of sample error
+data.frame(accuracy = accuracy, oos_error = oos_error, row.names = models)
+```
+
+## predict on testingset
+```{r}
+## Tree
+pred_test_rpart <-  predict(Fit_decision_Tree ,testdata)
+## RF
+pred_test_rf <-  predict(Fit_random_Forest ,testdata)
+## Gbm/boosting
+testPC <-  predict(Fit_boosting ,testdata)
+## svm
+pred_test_svm <- predict(mod_svm, testdata)
+```
+
+### PCA
+
+```{r}
+# mod_pca <- train(classe~., data=traindata, method="rpart",preProcess="pca", trControl = control, tuneLength = 5)
+# pred_pca<- predict(mod_pca, cvdata)
+# mpca <- confusionMatrix(pred_pca, factor(cvdata$classe))
+
+```
+

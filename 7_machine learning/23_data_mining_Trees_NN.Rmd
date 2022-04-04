@@ -1,0 +1,234 @@
+---
+title: "23_data_mining"
+author: "Bakro"
+date: "1/2/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### decision tree
+
+```{r}
+str(iris)
+set.seed(1234)
+ind <- sample(2, nrow(iris), replace=T, prob=c(0.7, 0.3))
+# split into training and test datasets
+iris.train <- iris[ind==1, ]
+iris.test <- iris[ind==2, ]
+# build a decision tree
+library(party)
+iris.formula <- Species ~ Sepal.Length + Sepal.Width +
+Petal.Length + Petal.Width
+iris.ctree <- ctree(iris.formula, data=iris.train)
+plot(iris.ctree)
+
+
+
+print('Prediction') 
+# predict on test data
+pred <- predict(iris.ctree, newdata = iris.test)
+# check prediction result
+table(pred, iris.test$Species)
+```
+
+```{r}
+## build a decision tree with rpart
+data("bodyfat", package = "TH.data")
+dim(bodyfat)
+# str(bodyfat)
+head(bodyfat, 5)
+
+# split into training and test subsets
+set.seed(1234)
+ind <- sample(2, nrow(bodyfat), replace=TRUE, prob=c(0.7, 0.3))
+bodyfat.train <- bodyfat[ind==1,]
+bodyfat.test <- bodyfat[ind==2,]
+# train a decision tree
+library(rpart)
+myFormula <- DEXfat ~ age + waistcirc + hipcirc + elbowbreadth +
+
+kneebreadth
+
+bodyfat.rpart <- rpart(myFormula, data = bodyfat.train,
+control = rpart.control(minsplit = 10))
+
+ print(bodyfat.rpart)
+library(rpart.plot)
+rpart.plot(bodyfat.rpart)
+```
+
+```{r}
+# select the tree with the minimum prediction error
+opt <- which.min(bodyfat.rpart$cptable[, "xerror"])
+cp <- bodyfat.rpart$cptable[opt, "CP"]
+# prune tree
+bodyfat.prune <- prune(bodyfat.rpart, cp = cp)
+# plot tree
+rpart.plot(bodyfat.prune)
+
+## make prediction
+DEXfat_pred <- predict(bodyfat.prune, newdata = bodyfat.test)
+xlim <- range(bodyfat$DEXfat)
+plot(DEXfat_pred ~ DEXfat, data = bodyfat.test, xlab = "Observed",
+ylab = "Prediction", ylim = xlim, xlim = xlim)
+abline(a = 0, b = 1)
+```
+
+### Random Forest
+
+```{r}
+# split into two subsets: training (70%) and test (30%)
+ind <- sample(2, nrow(iris), replace=TRUE, prob=c(0.7, 0.3))
+train.data <- iris[ind==1,]
+test.data <- iris[ind==2,]
+# use all other variables to predict Species
+library(randomForest)
+rf <- randomForest(Species ~ ., data=train.data, ntree=100,
+proximity=T)
+table(predict(rf), train.data$Species)
+# head(rf)
+# attributes(rf)
+print("Error Rate of Random Forest")
+plot(rf, main = "")
+print("Variable Importance")
+importance(rf)
+varImpPlot(rf)
+print("Margin of Predictions")
+irisPred <- predict(rf, newdata = test.data)
+table(irisPred, test.data$Species)
+##
+## irisPred setosa versicolor virginica
+## setosa 14 0 0
+## versicolor 0 17 3
+## virginica 0 1 11
+plot(margin(rf, test.data$Species))
+```
+### FFTrees
+```{r}
+
+#devtools::install_github("ndphillips/FFTrees", build_vignettes = TRUE)
+
+library(datasets)
+library(randomForest)
+library(ggplot2)
+library(dplyr)
+library(FFTrees)  
+```
+
+```{r}
+table(mushrooms$poisonous)/nrow(mushrooms)
+
+ggplot(data = mushrooms , aes (x = poisonous ,fill =poisonous)) + geom_bar()
+```
+
+## partioning 
+```{r}
+  intrain <- caret::createDataPartition(mushrooms$poisonous, p =.7,times = 1,list = FALSE)
+
+train_data <- mushrooms[intrain,]
+test_dataa <- mushrooms[-intrain,]
+```
+
+## model 
+
+
+```{r}
+model  <- FFTrees(poisonous~. ,train_data)
+```
+
+```{r}
+model
+```
+
+```{r}
+plot(model)
+```
+
+```{r}
+plot(model , what = "cues")
+```
+
+```{r}
+pred <- predict(model,test_dataa)
+table(pred,test_dataa$poisonous)
+```
+### neuralnet (regression )
+
+```{r message=FALSE , warning=FALSE}
+
+# Import Required packages
+set.seed(500)
+library(neuralnet)
+library(MASS)
+
+# Boston dataset from MASS
+data <- Boston
+head(Boston)
+
+# Normalize the data
+maxs <- apply(data, 2, max)
+mins <- apply(data, 2, min)
+scaled <- as.data.frame(scale(data, center = mins,scale = maxs - mins))
+
+# Split the data into training and testing set
+index <- sample(1:nrow(data), round(0.8 * nrow(data)))
+train_ <- scaled[index,]
+test_ <- scaled[-index,]
+
+# Build Neural Network
+model_nn <- neuralnet(medv ~ .,
+data = train_, hidden = c(5, 3),
+linear.output = TRUE)
+
+# Predict on test data
+predicted <- compute(model_nn , test_)
+
+# Compute mean squared error
+pr.nn_ <- pr.nn$net.result * (max(data$medv) - min(data$medv))+ min(data$medv)
+test.r <- (test_$medv) * (max(data$medv) - min(data$medv)) +
+min(data$medv)
+MSE.nn <- sum((test.r - pr.nn_)^2) / nrow(test_)
+print(paste("measured sequre error " , MSE.nn))
+# Plot the neural network
+plot(nn)
+
+# Plot regression line
+real = test_$medv
+pred = predicted$net.result
+plot(real, pred, col = "red",
+main = 'Real vs Predicted')
+abline(0, 1, lwd = 2)
+
+#View(data.frame(real ,predicted$net.result))
+```
+
+## neuralnet (classification )
+We're going to create a new variable called mpg2.  If the car has greater than 22 mpg that it's a one.  If less than 0.  This creates a binary variable, which we can use in the NN.
+```{r}
+hist(mtcars$mpg)
+mtcars$mpg2 <- ifelse(mtcars$mpg > 22,1,0)
+data <- mtcars[,2:12]
+rows <- sample(nrow(data), nrow(data) * .75, replace = T)
+train <- data[rows,]
+test <- data[-rows,]
+```
+We are going to use all the variables.  A '.' signifies all the variables in the data frame.  This helps time wise since you don't have to spell out all the columns.  It is also a logistic neural net model.
+```{r}
+model <- neuralnet(mpg2 ~ ., train, hidden = 3,
+                  act.fct = "logistic", linear.output = F )
+#?neuralnet
+```
+
+```{r}
+predict <- neuralnet::compute(model, test)
+predict
+```
+
+```{r}
+results <- ifelse(predict$net.result > .5, 1,0)
+table(results, test$mpg2)
+```
+

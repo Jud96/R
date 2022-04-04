@@ -1,0 +1,533 @@
+---
+title: "47_quanteda"
+author: "Bakro"
+date: "1/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(quanteda)
+```
+
+## General syntax
+
+-   •corpus\_\* manage text collections/metadata
+
+-   tokens\_\* create/modify tokenized texts
+
+-   dfm\_\* create/modify doc-feature matrices
+
+-   fcm\_\* work with co-occurrence matrices
+
+-   textstat\_\* calculate text-based statistics
+
+-   textmodel\_\* fit (un-)supervised models
+
+-   textplot\_\* create text-based visualizations
+
+-   Consistent grammar:
+
+-   object() constructor for the object type
+
+-   object_verb() inputs & returns object type
+
+## Extensions
+
+quanteda works well with these
+
+companion packages:
+
+-   quanteda.textmodels: Text scaling and classification models
+
+-   readtext: an easy way to read text data
+
+-   spacyr: NLP using the spaCy library
+
+-   quanteda.corpora: additional text corpora
+
+-   stopwords: multilingual stopword lists in R
+
+
+## Create a corpus from texts (corpus\_\*)
+
+```{r}
+#Read texts (txt, pdf, csv, doc, docx, json, xml)
+my_texts <- readtext::readtext("data/textdata.txt")
+text <- my_texts$text
+```
+
+```{r}
+#Construct a corpus from a character vector
+
+x <- corpus(text)
+
+```
+
+```{r}
+# Explore a corpus
+summary(data_corpus_inaugural, n = 2) # n  number of document
+summary(x)
+```
+
+```{r}
+#Extract or add document-level variables
+party <- data_corpus_inaugural$Party
+x$serial_number <- seq_len(ndoc(x))
+docvars(x, "serial_number") <- seq_len(ndoc(x)) # alternative
+summary(x)
+
+
+```
+
+```{r}
+#Bind or subset corpora
+corpus(data_corpus_inaugural[1:5]) + corpus(data_corpus_inaugural[7:9])
+corpus_subset(data_corpus_inaugural, Year > 1990)
+```
+
+```{r}
+# Change units of a corpus
+corpus_reshape(x, to = "sentences")
+```
+
+```{r}
+#Segment texts on a pattern match
+string = " welcome ## to ## germany ## 123 ## 45"
+x = corpus(string)
+corpus_segment(x, "##", extract_pattern = TRUE)
+```
+
+```{r}
+#Take a random sample of corpus texts
+corpus_sample(data_corpus_inaugural, size = 10, replace = FALSE)
+```
+
+## Extract features (dfm\_\*; fcm\_\*)
+
+### dfm
+
+```{r}
+x <- dfm(data_corpus_inaugural,
+tolower = TRUE, stem = FALSE, remove_punct = TRUE,
+remove = stopwords("english"))
+print(x,max_ndoc = 2 ,  max_nfeat = 4 ,)
+```
+
+### Create a dictionary
+
+```{r}
+dictionary(list(negative = c("bad", "awful", "sad"),
+positive = c("good", "wonderful", "happy")))
+### Apply a dictionary
+dfm_lookup(x, dictionary = data_dictionary_LSD2015)
+###Select features
+dfm_select(x, pattern = data_dictionary_LSD2015, selection = "keep")
+
+##Randomly sample documents or features
+dfm_sample(x, size = 2)
+```
+
+```{r}
+#Weight or smooth the feature frequencies
+dfm_weight(x, scheme = "prop") | dfm_smooth(x, smoothing = 0.5)
+```
+
+```{r}
+##Sort or group a dfm
+dfm_sort(x, margin = c("features", "documents", "both"))
+dfm_group(, groups = "President")
+```
+
+```{r}
+
+
+
+
+
+#Combine identical dimension elements of a dfm
+dfm_compress(x, margin = c("both", "documents", "features"))
+##Create a feature co-occurrence matrix (fcm)
+x <- fcm(data_corpus_inaugural, context = "window", size = 5)
+##fcm_compress/remove/select/toupper/tolower are also available
+x[4,]
+```
+
+## Useful additional functions
+
+```{r}
+# Locate keywords-in-context
+kwic(data_corpus_inaugural, pattern = "america*")
+#Utility functions
+#texts(data_corpus_inaugural) #Show texts of a corpus
+ndoc(data_corpus_inaugural) #Count documents/features
+nfeat(data_corpus_inaugural) #Count features
+summary(data_corpus_inaugural) #Print summary
+head(data_corpus_inaugural) #Return first part
+```
+
+## Tokenize a set of texts (tokens\_\*)
+
+```{r}
+#Tokenize texts from a character vector or corpus
+x <- tokens("Powerful tool for text analysis.",
+remove_punct = TRUE)
+#Convert sequences into compound tokens
+myseqs <- phrase(c("text analysis"))
+tokens_compound(x, myseqs)
+#Select tokens
+tokens_select(x, c("powerful", "text"), selection = "keep")
+#Create ngrams and skipgrams from tokens
+tokens_ngrams(x, n = 1:3)
+tokens_skipgrams(x, n = 2, skip = 0:1)
+#Convert case of tokens or features
+tokens_tolower(x)
+tokens_toupper(x) 
+##dfm_tolower(x)
+#Stem tokens or features
+tokens_wordstem(x) 
+#dfm_wordstem(x)
+```
+
+## Calculate text statistics (textstat\_\*)
+
+```{r}
+x <- dfm(data_corpus_inaugural,
+tolower = TRUE, stem = FALSE, remove_punct = TRUE,
+remove = stopwords("english"))
+```
+
+```{r}
+#Tabulate feature frequencies froma dfm
+head(textstat_frequency(x),2)
+head(topfeatures(x),2)
+
+#Identify and score collocations from a tokenized text
+toks <- tokens(c("quanteda is a pkg for quant text analysis",
+"quant text analysis is a growing field"))
+textstat_collocations(toks, size = 3, min_count = 2)
+#Calculate readability of a corpus
+textstat_readability(data_corpus_inaugural, measure = c("Flesch", "FOG"))
+#Calculate lexical diversity of a dfm
+textstat_lexdiv(x, measure = "TTR")
+#Measure distance or similarity from a dfm
+textstat_simil(dfm(corpus("I like dogs")), dfm(corpus("I like cats")), method = "cosine",
+margin = c("documents", "features"))
+
+textstat_dist(dfm(corpus("I like dogs")), dfm(corpus("I like cats")),
+margin = c("documents", "features"))
+##Calculate keyness statistics
+textstat_keyness(dfm(data_corpus_inaugural), target = "2017-Trump")
+```
+
+## Fit text models based on a dfm(textmodel\_\*)
+
+```{r}
+library(quanteda.textmodels)
+x <- dfm(data_corpus_inaugural,
+tolower = TRUE, stem = FALSE, remove_punct = TRUE,
+remove = stopwords("english"))
+```
+
+```{r}
+#Correspondence Analysis (CA)
+textmodel_ca(x, sparse = TRUE, residual_floor = 0.1)
+```
+
+```{r}
+Naïve Bayes classifier for texts
+textmodel_nb(x, y = training_labels, distribution = "multinomial")
+```
+
+```{r}
+#SVM classifier for texts
+textmodel_svm(x, y = training_labels)
+```
+
+```{r}
+#Wordscores text model
+refscores <- c(seq(-1.5, 1.5, .75), NA)
+textmodel_wordscores(data_dfm_lbgexample, refscores)
+```
+
+```{r}
+#Wordfish Poisson scaling model
+textmodel_wordfish(dfm(data_corpus_irishbudget2010), dir = c(6,5))
+Textmodel methods: predict(), coef(), summary(), print()
+```
+
+## Plot features or models (textplot\_\*)
+
+```{r}
+library(quanteda.textplots)
+#Plot features as a wordcloud
+data_corpus_inaugural %>%
+corpus_subset(President == "Obama") %>%
+dfm(remove = stopwords("en")) %>%
+textplot_wordcloud()
+
+
+dfm_inaug <- corpus_subset(data_corpus_inaugural, Year <= 1826) %>% 
+    dfm(remove = stopwords('english'), remove_punct = TRUE) %>%
+    dfm_trim(min_termfreq = 10, verbose = FALSE)
+set.seed(100)
+textplot_wordcloud(dfm_inaug)
+
+
+
+corpus_subset(data_corpus_inaugural, 
+              President %in% c("Washington", "Jefferson", "Madison")) %>%
+    tokens(remove_punct = TRUE) %>%
+    tokens_remove(stopwords("english")) %>%
+    dfm() %>%
+    dfm_group(groups = President) %>%
+    dfm_trim(min_termfreq = 5, verbose = FALSE) %>%
+    textplot_wordcloud(comparison = TRUE)
+
+
+textplot_wordcloud(dfm_inaug, min_count = 10,
+     color = c('red', 'pink', 'green', 'purple', 'orange', 'blue'))
+```
+
+```{r}
+
+##Plot word keyness
+data_corpus_inaugural %>%
+corpus_subset(President %in%
+c("Obama", "Trump")) %>%
+dfm(groups = "President",
+remove = stopwords("en")) %>%
+textstat_keyness(target = "Trump") %>%
+textplot_keyness()
+
+```
+
+```{r}
+#Plot Wordfish, Wordscores or CA models
+#(requires the quanteda.textmodels package)
+data_corpus_inaugural_subset <- 
+    corpus_subset(data_corpus_inaugural, Year > 1949)
+kwic(tokens(data_corpus_inaugural_subset), pattern = "american") %>%
+    textplot_xray()
+
+
+textplot_xray(
+     kwic(data_corpus_inaugural_subset, pattern = "american"),
+     kwic(data_corpus_inaugural_subset, pattern = "people"),
+     kwic(data_corpus_inaugural_subset, pattern = "communist")
+)
+```
+Frequency plot
+
+```{r}
+library("quanteda.textstats")
+library(ggplot2)
+dfm_inaug <- corpus_subset(data_corpus_inaugural, Year <= 1826) %>% 
+    dfm(remove = stopwords('english'), remove_punct = TRUE) %>%
+    dfm_trim(min_termfreq = 10, verbose = FALSE)
+features_dfm_inaug <- textstat_frequency(dfm_inaug, n = 100)
+
+# Sort by reverse frequency order
+features_dfm_inaug$feature <- with(features_dfm_inaug, reorder(feature, -frequency))
+
+ggplot(features_dfm_inaug, aes(x = feature, y = frequency)) +
+    geom_point() + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+# Only select speeches by Obama and Trump
+pres_corpus <- corpus_subset(data_corpus_inaugural, 
+                            President %in% c("Obama", "Trump"))
+
+# Create a dfm grouped by president
+pres_dfm <- tokens(pres_corpus, remove_punct = TRUE) %>%
+  tokens_remove(stopwords("english")) %>%
+  tokens_group(groups = President) %>%
+  dfm()
+
+# Calculate keyness and determine Trump as target group
+result_keyness <- textstat_keyness(pres_dfm, target = "Trump")
+
+# Plot estimated word keyness
+textplot_keyness(result_keyness) 
+```
+
+## Convert dfmto a non-quanteda format
+
+```{r}
+convert(x, to = c("lda", "tm", "stm", "austin", "topicmodels",
+"lsa", "matrix", "data.frame"))
+```
+
+
+
+
+# EXamples
+
+## Multi_Word Expressions
+
+### tokens
+
+```{r}
+toks <- tokens(data_corpus_inaugural)
+
+```
+
+### **Define multi-word expressions**
+
+```{r}
+multiword <- c("United States", "New York")
+head(kwic(toks, pattern = phrase(multiword))) # key words in context
+head(tokens_select(toks, pattern = phrase(multiword)))
+
+```
+
+```{r}
+# combined words by _
+comp_toks <- tokens_compound(toks, pattern = phrase(multiword))
+head(tokens_select(comp_toks, pattern = c("United_States", "New_York")))
+```
+
+###  dictionary
+
+```{r}
+ 
+multiword_dict <- dictionary(list(country = "United States", 
+                                  city = "New York"))
+```
+
+###  look up in dictionary
+
+```{r}
+head(tokens_lookup(toks, dictionary = multiword_dict))
+```
+
+### Collocations
+
+```{r}
+library("quanteda.textstats")
+col <- toks %>% 
+       tokens_remove(stopwords("en")) %>% 
+       tokens_select(pattern = "^[A-Z]", valuetype = "regex", 
+                     case_insensitive = FALSE, padding = TRUE) %>% 
+       textstat_collocations(min_count = 5, tolower = FALSE)
+head(col)
+
+## Compound collocations
+comp_toks2 <- tokens_compound(toks, pattern = col)
+head(kwic(comp_toks2, pattern = c("United_States", "New_York")))
+
+comp_toks3 <- tokens_compound(toks, pattern = phrase(col$collocation))
+head(kwic(comp_toks3, pattern = c("United_States", "New_York")))
+```
+
+## Latent Semantic Analysis (LSA)
+
+```{r}
+library(quanteda)
+```
+
+
+```{r}
+txt <- c(d1 = "Shipment of gold damaged in a fire",
+         d2 = "Delivery of silver arrived in a silver truck",
+         d3 = "Shipment of gold arrived in a truck" )
+
+mydfm <- dfm(txt)
+```
+
+
+```{r}
+mydfm
+```
+
+### Construct the LSA model
+
+
+```{r}
+library("quanteda.textmodels")
+mylsa <- textmodel_lsa(mydfm)
+```
+
+```{r}
+mylsa$docs[, 1:2]
+```
+
+###Apply the constructed LSA model to new data
+
+```{r}
+querydfm <- dfm(c("gold silver truck")) %>%
+    dfm_match(features = featnames(mydfm))
+```
+
+```{r}
+querydfm
+```
+
+
+```{r}
+newq <- predict(mylsa, newdata = querydfm)
+newq$docs_newspace[, 1:2]
+```
+
+## Social media analysis (Twitter)
+
+```{r}
+library(quanteda)
+```
+
+```{r}
+load("data/data_corpus_tweets.rda")
+```
+Construct a document-feature matrix of Twitter posts
+```{r}
+tweet_dfm <- tokens(data_corpus_tweets, remove_punct = TRUE) %>%
+    dfm()
+head(tweet_dfm)
+```
+Hashtags
+Extract most common hashtags
+```{r}
+tag_dfm <- dfm_select(tweet_dfm, pattern = "#*")
+toptag <- names(topfeatures(tag_dfm, 50))
+head(toptag)
+```
+
+Construct feature-occurrence matrix of hashtags
+```{r}
+library("quanteda.textplots")
+tag_fcm <- fcm(tag_dfm)
+head(tag_fcm)
+```
+
+```{r}
+topgat_fcm <- fcm_select(tag_fcm, pattern = toptag)
+textplot_network(topgat_fcm, min_freq = 0.1, edge_alpha = 0.8, edge_size = 5)
+```
+
+Usernames
+Extract most frequently mentioned usernames
+
+```{r}
+user_dfm <- dfm_select(tweet_dfm, pattern = "@*")
+topuser <- names(topfeatures(user_dfm, 50))
+head(topuser)
+```
+Construct feature-occurrence matrix of usernames
+
+```{r}
+user_fcm <- fcm(user_dfm)
+head(user_fcm)
+```
+
+
+
+```{r}
+user_fcm <- fcm_select(user_fcm, pattern = topuser)
+textplot_network(user_fcm, min_freq = 0.1, edge_color = "orange", edge_alpha = 0.8, edge_size = 5)
+```
+

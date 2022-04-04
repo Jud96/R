@@ -1,0 +1,170 @@
+---
+title: "36_keras_save_and_load_models"
+author: "Bakro"
+date: "1/4/2022"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide   
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Save and Restore Models
+```{r}
+library(keras)
+```
+
+```{r}
+mnist <- dataset_mnist()
+
+c(train_images, train_labels) %<-% mnist$train
+c(test_images, test_labels) %<-% mnist$test
+
+train_labels <- train_labels[1:1000]
+test_labels <- test_labels[1:1000]
+
+train_images <- train_images[1:1000, , ] %>%
+  array_reshape(c(1000, 28 * 28))
+train_images <- train_images / 255
+
+test_images <- test_images[1:1000, , ] %>%
+  array_reshape(c(1000, 28 * 28))
+test_images <- test_images / 255
+
+# Returns a short sequential model
+create_model <- function() {
+  model <- keras_model_sequential() %>%
+    layer_dense(units = 512, activation = "relu", input_shape = 784) %>%
+    layer_dropout(0.2) %>%
+    layer_dense(units = 10, activation = "softmax")
+  model %>% compile(
+    optimizer = "adam",
+    loss = "sparse_categorical_crossentropy",
+    metrics = list("accuracy")
+  )
+  model
+}
+
+model <- create_model()
+summary(model)
+
+model <- create_model()
+
+model %>% fit(train_images, train_labels, epochs = 5, verbose = 2)
+
+model %>% save_model_tf("model")
+
+list.files("model")
+
+new_model <- load_model_tf("model")
+summary(new_model)
+```
+
+### HDF5 FORMAT
+
+```{r}
+model <- create_model()
+
+model %>% fit(train_images, train_labels, epochs = 5, verbose = 2)
+
+model %>% save_model_hdf5("my_model.h5")
+
+new_model <- load_model_hdf5("my_model.h5")
+summary(new_model)
+
+# this technique saves everything:
+# 
+# The weight values
+# The model’s configuration(architecture)
+# The optimizer configuration
+# Keras saves models by inspecting the architecture. Currently, it is not able to save TensorFlow optimizers (from tf$train). When using those you will need to re-compile the model after loading, and you will lose the state of the optimizer
+```
+
+### CHECKPOINT CALLBACK USAGE
+
+```{r}
+checkpoint_path <- "checkpoints/cp.ckpt"
+
+# Create checkpoint callback
+cp_callback <- callback_model_checkpoint(
+  filepath = checkpoint_path,
+  save_weights_only = TRUE,
+  verbose = 0
+)
+
+model <- create_model()
+
+model %>% fit(
+  train_images,
+  train_labels,
+  epochs = 10, 
+  validation_data = list(test_images, test_labels),
+  callbacks = list(cp_callback),  # pass callback to training
+  verbose = 2
+)
+```
+
+```{r}
+list.files(dirname(checkpoint_path))
+```
+
+```{r}
+fresh_model <- create_model()
+fresh_model %>% evaluate(test_images, test_labels, verbose = 0)
+# loading saved model 
+fresh_model %>% load_model_weights_tf(filepath = checkpoint_path)
+fresh_model %>% evaluate(test_images, test_labels, verbose = 0)
+```
+
+### CHECKPOINT CALLBACK OPTIONS
+
+```{r}
+checkpoint_path <- "checkpoints/cp.ckpt"
+
+# Create checkpoint callback
+cp_callback <- callback_model_checkpoint(
+  filepath = checkpoint_path,
+  save_weights_only = TRUE,
+  save_best_only = TRUE,
+  verbose = 1
+)
+
+model <- create_model()
+
+model %>% fit(
+  train_images,
+  train_labels,
+  epochs = 10, 
+  validation_data = list(test_images, test_labels),
+  callbacks = list(cp_callback), # pass callback to training,
+  verbose = 2
+)
+```
+
+```{r}
+list.files(dirname(checkpoint_path))
+```
+
+#### Manually save the weights
+
+```{r}
+# Save the weights
+model %>% save_model_weights_tf("checkpoints/cp.ckpt")
+
+# Create a new model instance
+new_model <- create_model()
+
+# Restore the weights
+new_model %>% load_model_weights_tf('checkpoints/cp.ckpt')
+
+# Evaluate the model
+new_model %>% evaluate(test_images, test_labels, verbose = 0)
+```

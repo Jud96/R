@@ -1,0 +1,525 @@
+---
+title: "Machine Learning in R with caret"
+author: "Bakro"
+date: "12/4/2021"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R caret
+
+One of the fundamental aspects in the selection of variables is to check if their variance is zero or close to zero. This makes perfect sense: if the variance is close to zero, that means that there is not much variation within the data, that is, almost all observations have similar values.
+
+```{r}
+library(caret) 
+data(Sacramento)
+#skimr::skim(Sacramento)
+str(Sacramento)
+
+numeric_cols = sapply(Sacramento, is.numeric)
+variance = nearZeroVar(Sacramento[numeric_cols], saveMetrics = T)
+variance
+
+```
+
+```{r}
+## How to find correlated variables with caret
+################################################
+# Finding correlated variables in R using caret is very easy. To do this, you just have to pass a correlation matrix to the findCorrelation function. With this, caret will tell us which variables to eliminate (if there are any).
+
+sacramento_cor = cor(Sacramento[numeric_cols])
+findCorrelation(sacramento_cor)
+# As we can see, in this case, there are no correlated variables, so caret tells us that there is no variable to eliminate. However, if we create a new correlated variable, we will see how it would tell us that there are problems.
+
+fake_data = data.frame(
+  variable1 = 1:20,
+  variable2 = (1:20)*2,
+  variable3 = runif(20),
+  variable4 = runif(20) * runif(20)
+)
+
+findCorrelation(cor(fake_data), 
+                verbose = T,
+                names = T)
+# As we can see, the findCorrelation function identifies that variable1 is correlated with variable2, and indicates that it should be removed. But what if the variable was a linear transformation of other variables? That is, if we had a variable5, for example, that is the sum of variable1 and variable3. This would still be a problem, even though the variables are not correlated.
+
+
+# Well, precisely to detect these cases, caret includes the findLinearCombos function. Let’s see how it works:
+
+# I create fake data
+fake_data$variable5 = fake_data$variable1 + 2*fake_data$variable3
+
+# I check if there are any linear combinations
+findLinearCombos(fake_data)
+
+# As we can see, the findLinearCombos function tells us that columns 1 and 2 are linear combinations and so are columns 5,1, and 3. That is why it recommends eliminating columns 2 and column 5.
+
+# As we can see, we can perform very important questions about the Feature Selection process in R thanks to the caret package and, furthermore, in a very simple way.
+
+# But that’s not all, R’s caret package also helps a lot in the transformation of the data. Let’s see how he does it!
+```
+
+### **How to transform data with caret**
+
+Among the transformations we usually undertake in Machine Learning we remark:
+
+-   **Creating dummy variables**: many models cannot work with categorical variables. Instead, they dumify it, that is, they create n-1 columns (where n is the number of categories), and that each of these columns indicates the presence (1) or absence (0) of that particular value. Although many models (such as logistic regression) do it themselves, other models (such as xgboost) require you to do it manually.
+
+-   **Data scaling**: consists of normalizing the scale of the data, since this is very important in algorithms such as regularization models (Ridge, Lasso and Elastic Net) or kNN, among others.
+
+-   **Imputation of missing values**: the vast majority of models (except those based on trees) cannot work with missing values. That is why, when we have missing values, we either impute or eliminate those observations or variables. Luckily, caret makes it very easy to impute missing values ​​using various types of models.
+
+-   **Dimensionality reduction**: When we work on a problem with a high level of dimensionality, that is, with many variables, it is usually interesting to reduce the number of variables while maintaining as much variability as possible. This process is usually done with a principal component analysis or PCA.
+
+So, let's see how to do all these types of transformations in our machine learning models in R with caret, the vast majority of them with the same function: `preProcess`.
+
+#### **How to create dummy variables with caret**
+
+Creating dummy variables with caret is very simple, we simply have to use the `dummyVars` function and apply a `predict` to obtain the resulting data.
+
+```{r}
+# As we can see, caret has converted a single column (type) into three columns (one per category), each of them being binary. However, it has not eliminated one of the categories, creating redundancy. After all: Condo = 0 & Multi_Family = 0 --> Residential = 1 .
+
+# Luckily we can indicate this with the drop2nd == TRUE parameter.
+
+pre_dummy = dummyVars(price ~ type, data = Sacramento,
+                      drop2nd = T)
+sacramento_dummy = predict(pre_dummy, Sacramento)
+
+head(sacramento_dummy)
+```
+
+#### **How to scale data**
+
+To scale the data, we simply have to pass arguments to the method parameter to caret's `preProcess` function. This function accepts two main types:
+
+-   `center`: subtract the average from the values, so that they all have average 0.
+
+-   `scale`: divide the values between the standard deviation. In this way, the data will have standard deviation 1.
+
+-   `range`: normalizes the data, making it have a range from 0 to 1.
+
+```{r}
+### preProcess(Sacramento, method = "center")
+# As we can see, caret has centered the data of 6 variables, corresponding to the numerical variables, ignoring 3 variables. We see the message, but not the data. Why?
+# 
+# The reason is that the preProcess function is not intended to transform the data at the moment, but to do the transformation in the training (or inference) process.
+# 
+# However, we can see how our data looks after applying the transformation. To do this, we have to pass the result of the preprocessing and our data to the predict function. Let’s see how it works.
+
+# preprocess = preProcess(Sacramento, method = "center")
+# predict(preprocess, Sacramento)[1:10,]
+
+
+preprocess = preProcess(Sacramento, method = "range")
+Sacramento_processed = predict(preprocess, Sacramento)
+
+cat("--- Datos sin procesar ---","\n",
+    "Min:", min(Sacramento$sqft),"\n",
+    "Max:", max(Sacramento$sqft), "\n","\n",
+    "--- Datos procesados ---","\n",
+    "Min:", min(Sacramento_processed$sqft),"\n",
+    "Max:", max(Sacramento_processed$sqft)
+    )
+```
+
+### **How to impute missing values ​​with caret**
+
+To impute missing values ​​with caret, we will use the `preProcess` function. In this case, there are different values ​​that we can pass to the method parameter:
+
+-   `knnImpute`: allows you to use the kNN algorithm to impute missing values. As you know (if not, I'll explain it in this [post](https://anderfernandez.com/en/blog/code-knn-in-r/)), the kNN algorithm requires you to indicate the number of neighbors to use in the prediction. That is why, if we use the `knnImpute` method, we will also have to indicate the `k` parameter .
+
+-   `bagImpute`: with this value we will use several decision trees to make the imputation of our missing value.
+
+-   `medianImpute`: as its name suggests, it imputes the median (in the case of a numeric variable). This is usually preferable to imputing the mean, since the mean can be affected by outliers.
+
+Let's see how missing value imputation works with caret in practice. To do this, first of all, we are going to "remove" some data from our dataset to simulate that we have missing values.
+
+```{r eval=FALSE}
+sacramento_missing <- Sacramento_processed
+colSums(is.na(sacramento_missing))
+
+# Realizamos la imputación
+pre_knn = preProcess(sacramento_missing, 
+                     method = "knnImpute", k = 2)
+
+pre_bag = preProcess(sacramento_missing, 
+                     method = "bagImpute")
+
+pre_median = preProcess(sacramento_missing, 
+                        method = "medianImpute")
+
+# Obtenemos los datos
+imputed_knn = predict(pre_knn, sacramento_missing)
+imputed_bag = predict(pre_bag, sacramento_missing)
+imputed_median = predict(pre_median, sacramento_missing)
+
+# Comprobamos con el valor real
+print(Sacramento[c(1,4,5), c(1,3,4,5)])
+print(imputed_knn[c(1,4,5), c(1,3,4,5)]) # Uses normalized data
+print(imputed_bag[c(1,4,5), c(1,3,4,5)])
+print(imputed_median[c(1,4,5), c(1,3,4,5)])
+```
+
+As we can see, we have been able to carry out the imputation of the missing values ​​in a very simple way. So far we have already seen a lot of things for data preprocessing with caret: variable selection, data transformation, imputation of missing data... But there is still more! With caret you can do cool things like using a PCA for dimensionality reduction. Let's see how it works!
+
+## 
+
+**How to reduce dimensionality**
+
+When we work on Machine Learning problems with many variables, we often have problems because, the vast majority of models do not work well with many predictor variables and, if they do, they require a lot of data.
+
+In these cases, a good option is usually to apply a dimensionality reduction method, such as principal component analysis or PCA.
+
+Luckily, applying a PCA to our R dataset is very easy thanks to caret. To do this, we simply have to indicate the PCA value to the `method` parameter of the `preProcess` function. Likewise, with the `thresh` parameter we can indicate the percentage of variability that we want to keep.
+
+```{r}
+# change thresh 0.8 0.9 0.95
+pre_pca = preProcess(Sacramento, method = "pca", thresh = 0.85)
+head(predict(pre_pca, Sacramento) ,6)
+```
+
+As we can see, now the dataset has 6 columns instead of 9. Yes, I know, this is not the best example in which applying a PCA adds a lot of value, but, as we can see, we can do it and in a very simple way thanks to caret.
+
+With this, we have already seen all the options that the caret library offers for data transformation. But the options go much, much further, especially in modeling. Let's see what it offers.
+
+## **How to create machine learning models with caret**
+
+### **Choose the machine learning model to use**
+
+When we want to create a Machine Learning model in R, we generally load a library that contains the algorithm that interests us. For example, if we want to use a Random Forest, we will load the `randomForest` package, while if we want to use AdaBoost, we will load the `ada` package.
+
+And here the first problem arises, and that is that each package is different and has its own implementation: some require that you pass a formula, others that you pass the predictors and the dependent variable separately, some manage the dummyfication, but others do not ...
+
+In addition, each model has its own hyperparameters, and the way to tune them changes from package to package.
+
+Well, creating machine learning models in R with caret is very simple, since caret unifies the way of creating and optimizing the hyperparameters of 238 different models.
+
+So, if we want to create a machine learning model with caret, the first thing is to know how that model is called within caret. We can discover this on [this page](https://topepo.github.io/caret/available-models.html). For example, there we will see that we can call the `randomForest` model from the `randomForest` library with the name `rf`.
+
+### **How to partition data in train and test**
+
+Once we have chosen our model, we will have to divide the data into train and test. To do this, caret offers a very useful function, called `createDataPartition`, which is used to make this partition.
+
+The function is very simple, we simply have to pass our dependent variable and the proportion of data that we want to be trained (generally between 0.7 and 0.8 of the total).
+
+With this, the `createDataPartition` function returns the indices of the observations that must go to each partition. By default, the information is returned as a list, which I personally don't like. Luckily, we can avoid this by specifying the `list = FALSE` parameter.
+
+Let's see how to split our data between train and test with caret:
+
+```{r}
+intrain <- caret::createDataPartition(Sacramento_processed$price , times = 1 , p =.7 ,list = FALSE)
+
+Sacramento_processed$zip = NULL
+Sacramento_processed$city = NULL
+Sacramento_processed$type = NULL
+# add type (categorical) as dummy to df
+Sacramento_processed <- cbind(Sacramento_processed ,sacramento_dummy)
+
+indep_var = colnames(Sacramento_processed) != "price"
+train_df <- Sacramento_processed[intrain,]
+test_df  <- Sacramento_processed[-intrain,]
+cat('Train rows: ', nrow(train_df),"\n",
+    'Test rows: ', nrow(test_df),
+    sep="")
+```
+
+### **How to train a machine learning model with caret**
+
+Once we have defined the model, we can create it very easily with the `train` function. We will simply have to pass the independent variables on one side and the dependent variable on the other and indicate the model in the `method` parameter.
+
+```{r}
+
+model_rf = caret::train(x = train_df[indep_var], 
+                 y = train_df$price,
+                 method = 'rf'
+                 )
+
+model_rf
+```
+
+As we can see, with the train function we have not only created the model (in this case a randomForest), but also made a small tuning of the `mtry` parameter (which indicates the number of random variables to choose from each tree created) and indicates the main adjustment measures of the model (RMSE and MAE).
+
+But there is still more, when creating our model, we can tell caret to make a transformation of our data, like the ones we have seen previously. For that we simply have to pass the preProcess value to the train function.
+
+For example, suppose we are going to use the kNN algorithm, which requires that the data be normalized. Let's see how we can process the data in the training itself:
+
+```{r}
+
+model_knn = train(x = train_df[indep_var], 
+                 y = train_df$price,
+                # preProcess = "range",
+                 method = 'knn'
+                 )
+
+model_knn
+```
+
+### **How to optimize the hyperparameters of a model with caret**
+
+As we have seen, when we make a model in caret, it directly applies a default tuning. However, we may be interested in controlling what values ​​these hyperparameters take. Well, doing this with caret is very simple.
+
+In order to test different parameters, we must first create our own Grid Search. When we do an optimization by Grid Search we basically test all the possible combinations of all the hyperparameters that we indicate.
+
+For example, suppose we want to create a rule-based Lasso regression and we want to tune the `lambda` parameter, which indicates the level of penalty to be performed.
+
+**Important**: the parameters that we can tune for each model appear in the list of available models.
+
+To do this, we simply have to pass each value of each parameter that we want it to test to the expand.grid function. Important, if there are parameters that we only want to have one value, we also have to include them. Let's see how it's done:
+
+```{r eval=FALSE}
+odel_lasso = train(x = Sacramento_processed[indep_var], 
+                 y = Sacramento_processed$price,
+                 method = "glmnet",
+                 family = "gaussian",
+                 tuneGrid = tunegrid
+                 )
+model_lasso = train(x = Sacramento_processed[indep_var], 
+                 y = Sacramento_processed$price,
+                 method = "glmnet",
+                 family = "gaussian",
+                 tuneGrid = tunegrid
+                 )
+model_lasso
+```
+
+As you can see, performing a Grid Search with caret is very simple. And yes, although it is already a lot, there is still more. And is that caret allows something else too: do cross validation or cross validation. Let's see how to do it.
+
+### **How to do Cross Validation with caret**
+
+To perform cross validation in R with caret we simply have to call the `trainControl` function and pass this result to our training function.
+
+Within the `trainControl` function we can indicate many of the questions that interest us, such as the resampling method to use or how many times we should use it.
+
+The most typical thing is to set the method as `cv` or `repeatedcv` which allows cross validation, although we can also bootstrap if we set the value to `boot`, `boot632`, `optimism_boot` or `boot_all`.
+
+Also, if our data is imbalanced, we can balance it in different ways using the `sampling` parameter. The types of samples it allows are: `down` for downsampling, `up` for upsampling or applying specific sampling models with `smote` or `rose`.
+
+Let's see how it works by applying it to the Lasso regression example we created previously:
+
+```{r eval=FALSE}
+fitControl = trainControl(method = "repeatedcv",
+                          number = 10,
+                          repeats = 10)
+
+cv_model_lasso = train(x = Sacramento[indep_var], 
+                 y = Sacramento$price,
+                 method = 'glmnet',
+                 family = 'gaussian',
+                 tuneGrid = tunegrid,
+                 trControl = fitControl
+                 )
+cv_model_lasso
+```
+
+s we can see, each of the models has performed a 10-fold cross validation, which has been repeated 10 times. And, of course, the model error for the different lambda values ​​have changed.
+
+Finally, I would like to comment on an important question for the training of our machine learning models in R with caret: parallel training.
+
+### **How to train Machine Learning models in R in parallel**
+
+When we create models, they can take time to execute, especially if we carry out a very extensive Grid Search (besides, it must be said, caret is not very fast).
+
+Luckily, caret offers us the option of parallelizing the models, in such a way that we can make many more models in less time.
+
+To check this, let's see how long it takes to create a Lasso regression with many hyperparameters if we do not parallelize the model:
+
+```{r}
+tic = Sys.time()
+
+tunegrid = expand.grid(
+  alpha  = seq(0,1,0.1),
+  lambda = c(0,1,100,200,500,1000,2000,5000,10000,50000)
+) 
+
+fitControl = trainControl(method = "repeatedcv",
+                          number = 10,
+                          repeats = 10)
+
+cv_model_lasso = train(x = train_df[indep_var], 
+                 y = train_df$price,
+                 method = 'glmnet',
+                 family = 'gaussian',
+                 tuneGrid = tunegrid,
+                 trControl = fitControl
+                 )
+#cv_model_lasso$bestTune
+toc = Sys.time()
+
+cat("Total time:",toc-tic)
+# tune grid rf
+# tg <- data.frame(mtry = seq(2, 10, by =2))
+# tg <- expand.grid(shrinkage = seq(0.1, 1, by = 0.2), 
+#                   interaction.depth = c(1, 3, 7, 10),
+#                   n.minobsinnode = c(2, 5, 10),
+#                   n.trees = c(100, 300, 500, 1000))
+# rf1 <- train(annual_pm~., data = air, method = "rf", tuneGrid = tg)
+```
+
+As we can see, it took a little over 20 seconds to complete the entire process. But what if we parallelize it?
+
+Parallelizing a model in R with caret is very simple, you just have to create a cluster with the `doParallel` library and stop the cluster once we have trained.
+
+The cluster can be created as follows:
+
+```{r}
+library(doParallel)
+cl = makePSOCKcluster(2)
+registerDoParallel(cl)
+```
+
+Now that we have created the cluster, we can run the same code as before, which will now be parallelized automatically.
+
+```{r}
+tic = Sys.time()
+
+tunegrid = expand.grid(
+  alpha  = seq(0,1,0.1),
+  lambda = c(0,1,100,200,500,1000,2000,5000,10000,50000)
+) 
+
+fitControl = trainControl(method = "repeatedcv",
+                          number = 10,
+                          repeats = 10)
+
+cv_model_lasso_par = train(x = train_df[indep_var], 
+                           y = train_df$price,
+                           method = 'glmnet',
+                           family = 'gaussian',
+                           tuneGrid = tunegrid,
+                           trControl = fitControl
+                           )
+
+toc = Sys.time()
+
+cat("Total time:",toc-tic)
+```
+
+```{r}
+cv_model_lasso_par
+```
+
+As we can see, now the creation of the model has only taken 9 seconds, that is, less than half the time that without parallelizing. All with 2 very simple lines of code. And be careful, this is applicable to all 238 models that caret includes.
+
+Finally, we have to stop the cluster, which we can do with the following function:
+
+```{r}
+stopCluster(cl)
+```
+
+As you can see, caret offers very very interesting advantages. Finally, we come to the final stretch of this post, where we will see how to make predictions with caret, as well as evaluate the performance of an ML model. Let's go there!
+
+## **How to make predictions and measure predictive capacity of the model with caret in R**
+
+To make predictions with R we must pass new data and our model to the predict function, like any other normal model in R.
+
+```{r}
+test_da <- test_df[,indep_var]
+true_values <- test_df[,!indep_var]
+pred = predict(cv_model_lasso_par , test_df[,indep_var])
+head(pred)
+head(true_values)
+```
+
+Likewise, caret also offers functions to calculate the predictive capacity of the models. This will depend on the types of data we have. For numeric variables, we can use the RMSE functions and the defaultSummary function, which returns the main metrics (RMSE, R2, and MAE).
+
+I personally tend to like the RMSE function better, basically because it tends to be the way (in general) I use to measure the predictive capacity of models. Also, it is easier to perform than the defaultSummary function, since the latter requires you to create a dataframe for it to function. Let's see how they work:
+
+```{r}
+print("Use of defaultSummary")
+defaultSummary(
+  data = data.frame(obs = true_values, 
+                    pred = pred))
+
+print("Use of RMSE")
+RMSE(pred, true_values)
+```
+
+Likewise, in the case of categorical variables, caret offers the `confusionMatrix` function, which calculates the confusion matrix, as well as all the metrics associated with it.
+
+```{r }
+pred_fake = factor(round(runif(100)))
+real_fake = factor(round(runif(100)))
+
+confusionMatrix(pred_fake, real_fake)
+```
+
+Although it is not a real case, we see that caret offers a lot of information with just one line of code.
+
+## **Summary**
+
+In short, if you are going to do machine learning with R, caret is a package that you should know. Not only does it unify many models in the same package, but it standardizes super interesting things such as hyperparameter optimization or cross-validation. In addition, it allows you to train all the models in a super simple way.
+
+As if that were not enough, it has several functions with which, in a very simple way, we can see how good our model has been.
+
+In short, caret is a very good package and I hope this post has served you to all the potential it has. See you in the next post!
+
+## Example
+### Predict Diabetes with a Random Forest using R
+
+```{r}
+library(caret)
+library(mlbench)
+library(e1071)
+```
+
+```{r}
+data("PimaIndiansDiabetes")
+df <- PimaIndiansDiabetes
+## inform about data (scenario)
+str(df)
+
+```
+
+
+```{r}
+skimr(df)
+colnames(df)
+glimpse(df)
+```
+### ploting 
+```{r}
+ggplot(data = df ,aes(diabetes, fill =factor(diabetes))) + geom_bar()
+```
+
+
+```{r}
+## preprocessing
+df$binary <- ifelse(df$diabetes == "pos",1,0)
+df <- df [,-9]
+```
+
+```{r}
+## spilting data
+intrain <- caret::createDataPartition(df$binary , times = 1 , p =.7 ,list = FALSE)
+
+df_train <- df[intrain,]
+df_test  <- df[-intrain,]
+
+str(df)
+```
+
+
+```{r}
+model <- caret::train(as.factor(binary)~.,data = df_train , method = "ranger",trControl = trainControl(method = "repeatedcv",number = 2
+ ,repeats = 2))
+model
+```
+
+
+```{r}
+pred <- predict(model ,df_test)
+confusionMatrix(pred ,as.factor(df_test$binary))
+```
+

@@ -1,0 +1,1545 @@
+---
+title: "Basics"
+output:
+ html_document:
+    toc: true
+    toc_float: true
+runtime: shiny_prerendered
+---
+
+# Basics
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## say hello to R
+
+**output (**print and cat**)**
+
+```{r}
+print("welcome in R")
+cat("*******************")
+cat("R is a programming language and free software environment for statistical computing and graphics")
+cat("say hello to R")
+```
+
+![](images/how%20use%20R.png)
+
+## **basics operations**
+
+```{r}
+library(tidyverse)
+library(learnrbook)
+library(learnr)
+1+1
+1-1
+1*1
+1/1
+3^2
+(2+3)*2 
+log(30)
+exp(2)
+round(4.56,1)
+round(20.51,0)
+abs(-1)
+sin(30)
+cos(30)
+```
+
+```{r quiz100, echo=FALSE}
+quiz(
+  question(" what result of (1+2)* 1+3 ?",
+    answer("5"),
+    answer("6", correct = TRUE),
+    answer("4")
+  ),
+  
+  question(" what result of round(30.97,1)?",
+    answer("30.9"),
+     answer("31", correct = TRUE),
+    answer("30,95")
+  )
+)
+
+```
+
+🔍 play with numbers and find new method for math
+
+```{r exe1, echo=FALSE ,exercise=TRUE}
+
+```
+
+## logic operation
+
+```{r}
+ 1 == 2 # is 1 equal to two
+ 1 != 2 # is 1 not equal to two
+ 1 > 2  # is 1 bigger than two
+ 1 < 2  # is 1 smaller than two
+ 1 <= 2 # is 1 bigger or equal than two
+ 1 >= 2 # is 1 bigger or equal than 2
+ 1 %in% c(1,2,3) # is 1 a element in 1,2,3
+ is.na(NA) # info for sth not avaiable 
+ 3> 5 & 5> 3 # when two condtions are true than result true
+ 3> 5 | 5> 3 # when one condtions are true than result true
+```
+
+```{r quiz2, echo=FALSE}
+
+quiz(
+  question(" what result of (1+2) == (1+3) ?",
+    answer("True"),
+    answer("False", correct = TRUE)
+  ),
+  question(" what result of 1 > 2 & 2 == 2 ?",
+   answer("True"),
+    answer("False", correct = TRUE)
+  ),
+  question(" what result of 1 > 2 | 2 == 2 ?",
+   answer("True"),
+    answer("False", correct = TRUE)
+  )
+)
+
+```
+
+🔍 play with numbers& logic and find new method for math
+
+```{r exe2, echo=FALSE, exercise=TRUE}
+
+```
+
+## **save variable in memory**
+
+```{r}
+grade <- 70.5 # num = 1
+semster <- 3L
+name <- "alex"
+is_passed <- (grade > 60 )
+grade
+name  == "ali"
+```
+
+> data types are`numeric` , `character`, `integer` , `logic`
+>
+> here i look up for only one person what if i have more people
+
+*can i know data type for variable ?*
+
+```{r}
+mode(grade) # try for another viarlbes
+```
+
+```{r quiz3, echo=FALSE}
+quiz(
+  question(" what type  of varible x <- \"3\" ?",
+    answer("INTEGER"),
+    answer("CHARACTER", correct = TRUE),
+    answer("LOGICAL")
+  ),
+  
+  question(" what type  of varible x <- 30 ?",
+     answer("INTEGER"),
+     answer("CHARACTER"),
+     answer("LOGICAL"),
+     answer("NUMERIC", correct = TRUE)
+  )
+)
+
+```
+
+🔍 define variables and discover types of this variables and show them using cat
+
+```{r exe3, echo=FALSE ,exercise=TRUE}
+# for example
+year <-  2022L
+birthday <- 1996L
+age <- year - birthday
+cat("myAge is " , age ) # concate using , 
+
+```
+
+## **Daten structures**
+
+**suppose i want to have more observation \>\> vector**
+
+### vectors
+
+```{r}
+student <- c("alex", "ali","mo")
+grade   <- c(180 , 70,50)
+semster <- c(3L,4L,1L)
+is_passed <- (grade > 60 )
+```
+
+> vectors have same type of data / select good name for your variables
+
+🔍 define vectors and discover types
+
+```{r exe4, echo=FALSE ,exercise=TRUE}
+
+
+```
+
+what happened if we have combined two data type in one vector ? let's try
+
+```{r}
+vec <- c(1,TRUE,"alex")
+mode(vec)
+```
+
+> **structure casting** logical \> integer \> numeric \> character
+
+when vector include logic and integer \>\> integer
+
+when vector include numeric and integer \>\> numeric
+
+```{r quiz6, echo=FALSE}
+quiz(
+  question(" what type  of varible x <- c(1,\"3\" ) ?",
+    answer("INTEGER"),
+    answer("CHARACTER", correct = TRUE),
+    answer("LOGICAL")
+  ),
+  
+  question(" what type  of varible x <- c(1,3L) ?",
+     answer("INTEGER"),
+     answer("CHARACTER"),
+     answer("LOGICAL"),
+     answer("NUMERIC", correct = TRUE)
+  ),
+    question(" what type  of varible x <- c(TRUE,3L) ?",
+     answer("INTEGER", correct = TRUE),
+     answer("CHARACTER"),
+     answer("LOGICAL"),
+     answer("NUMERIC")
+  )
+)
+
+```
+
+🔍 test different merging
+
+```{r exe6, echo=FALSE ,exercise=TRUE}
+ vec2 <- c(1,2L,"321")
+  mode(vec2)
+```
+
+### test situation for casting
+
+> to change from type to another use as.typecast(object)
+>
+> white test include every situation
+
+| from \>\> to | integer  | numeric  | character | logic    |
+|--------------|----------|----------|-----------|----------|
+| integer      | no sense | **✔️**   |           |          |
+| numeric      |          | no sense |           |          |
+| character    | ✖️       |          | no sense  |          |
+| logic        |          |          |           | no sense |
+
+```{r}
+# student grade semster is_passed
+as.numeric(semster)
+as.integer(student)
+```
+
+how many element contain vec ?
+
+```{r}
+length(vec)
+```
+
+```{r quiz7, echo=FALSE}
+quiz(
+  question(" what result of length(student)-1  ?",
+    answer("3"),
+    answer("2", correct = TRUE),
+    answer("1")
+  ),
+  
+  question(" what result of x <- c(1,2L) than as.logical(x)  ",
+     answer("INTEGER"),
+     answer("CHARACTER"),
+     answer("NUMERIC"),
+     answer("LOGICAL"),
+     answer("all wrong",correct = TRUE)
+     
+  )
+)
+
+```
+
+🔍 make different casting and complete table
+
+```{r exe7, echo=FALSE ,exercise=TRUE}
+
+
+```
+
+### selection
+
+> **indexing access to interested data**
+
+i want to study level of `education`in `germany`
+
+what is the second element of this vec ?
+
+```{r}
+student[2] 
+```
+
+what is range of student 1-2
+
+```{r}
+student[1:2]
+```
+
+```{r}
+student[-1] # without first elemnet 
+```
+
+```{r}
+student[c(1,3)] # first and third element 
+```
+
+select name of student that in 4 semster
+
+-   split this problem
+
+-   function ( code write to make your code easier to write and read)
+
+-   package (contain many functions in one direction and data )
+
+```{r}
+semster == 4 # return logical with true,false 
+ind <- which(semster == 4 ) # return position that determine condition 
+student[ind]
+
+```
+
+> it's difficult to deal with multi vectors \>\> **`data frame`** (excel )
+
+```{r quiz8, echo=FALSE}
+
+quiz(
+  question(" when you have multiple vectors connected with each other,you prefer
+           to work with ",
+    answer("dataframe", correct = TRUE),
+    answer("vectors"),
+    answer("matrix")
+  ),
+  
+  question(" what result of grade[1]?",
+    answer("60", correct = TRUE),
+    answer("30"),
+    answer("35")
+  ),
+    question(" what result of grade[4]?",
+    answer("60"),
+    answer("50"),
+    answer("NA", correct = TRUE)
+  )
+)
+```
+
+```{r exe8, exercise=TRUE}
+# change grad of alex to 80
+# there is student his name alex
+
+# when yes what is index of alex and assign it to index variable  
+
+# how can access to grade of alex 
+
+# same task but name of student  mmm
+
+```
+
+```{r exe8-solution}
+# there is student his name alex
+ name == "alex"
+# when yes what is index of alex 
+ind <- which(name == "alex")
+# how can access to grade of alex 
+grade[ind]
+```
+
+### matrix
+
+> Matrix : 2d col semster , row for student include same type of data type
+
+```{r}
+# raw stoff for matrix is vector 
+mat <-  matrix(c(60,65,70,80,30,10,60,70,90),nrow = 3,ncol = 3 ,byrow = TRUE)
+mat
+```
+
+try to change number of row and col , byrow to false what happened ?
+
+what happened if nrow\*ncol \> size , nrow\*ncol \< size vector ?
+
+what is attribute of this mat ?
+
+```{r}
+length(mat)  # 9
+nrow(mat)    # 3
+ncol(mat)   # 3
+dim(mat)    # 3 3
+summary(mat) # what you have noticed 
+
+```
+
+> **summary** give you info for every col
+
+```{r quiz9, echo=FALSE}
+
+quiz(
+  question(" matrix are vectors with different datatype ",
+    answer("FAlSE", correct = TRUE),
+    answer("TRUE")
+  ),
+  
+  question(" what include summary(mat) ?",
+    answer("Min values for every col", correct = TRUE),
+    answer("Min values for every row"),
+    answer("MIn value for all matrix"),
+    answer("number of row "),
+    answer("Mean values for every col", correct = TRUE)
+  )
+)
+```
+
+```{r exe9, exercise=TRUE}
+# define different matrix and play with it 
+# apply different functions that you have learned 
+```
+
+i haven't understand what this matrix include can i change names of row and cols ?
+
+```{r}
+row.names(mat) <- student
+colnames(mat) <- c("semster1","semster2","semster3")
+mat
+```
+
+return first and third semster for all student
+
+```{r}
+mat[,c(1,3)]
+mat[rownames(mat)== "alex",]
+```
+
+```{r quiz12, echo=FALSE}
+quiz(
+  question(" what can happend   of varible row.names(mat)[3] <- \"mmm\" ?",
+    answer("no thing "),
+    answer("change name of col 3 to mmm"),
+    answer("change name of row  3 to mmm", correct = TRUE)
+  ),
+  
+  question(" what type  of varible mat[rownames(mat) == \"alex\",rownames(mat) ==\"semster2\" ] ?",
+     answer("75"),
+     answer("65", correct = TRUE),
+     answer("80")
+     
+  )
+)
+
+```
+
+### factors
+
+> is vector with different levels for performance and storage and security of data
+>
+> qualitative character that take only number of values
+
+gender : male / female
+
+level of games : beginner / medium / expert / profi
+
+is male bigger than female ?
+
+can i write another value in gender ?
+
+can i say that level of beginner is smaller than expert ?
+
+```{r}
+diamonds$cut -> fac
+levels(fac)
+
+```
+
+## data frame
+
+data frame : is a special list with same length or as google sheets/Ms Excel tables
+
+here in R is combination of different daten structures(vectors,matrix,factors,...)
+
+### initialize df
+
+```{r}
+sampledataframe <- data.frame(int = c(1L, 2L, 3L) ,
+           dbl = c(1.5, 5.5, 7.5) ,
+           lgl= factor(c(TRUE,FALSE,TRUE))
+           ,chr = c("Hans", "Peter", "Michael")
+           ,matrix(c(1:9),nrow = 3,ncol = 3,byrow = FALSE),
+           stringsAsFactors = FALSE )
+```
+
+### structure and explore df
+
+```{r}
+head(diamonds,3)
+tail(diamonds,3)
+dim(diamonds)
+nrow(diamonds)
+ncol(diamonds)
+str(diamonds)
+skimr::skim(diamonds)
+summary(diamonds)
+```
+
+### Tibbles
+
+\- Never change the data types of the inputs
+
+\- Never change the names of your variables
+
+\- never create row names
+
+\- Make printing easier
+
+```{r}
+as_tibble(diamonds)
+```
+
+### Indexing df
+
+selected area of search/spilting that help to achieve business goals
+
+#### one or range of observation
+
+> you can here choose range of x and y as matrix
+
+```{r }
+diamonds[1,] # only one observation 
+diamonds1 <- diamonds[1:1000,] # range of observation 
+```
+
+#### access to columns
+
+```{r}
+t<- diamonds$carat
+t<- diamonds$carat[1:10]
+```
+
+#### spilting observation (train/valid/test)
+
+i have 10000 letters image (a-z) spilt 6000 train and 2000 to valid data and 2000 to show accuracy of my algorithm (modeling /machine learning)
+
+```{r}
+samples <- sample(3, size=1000, replace=TRUE, prob=c(.60,.20,.20)) # sampling data to groups 
+train <- diamonds1[samples == 1,c(1,5,6)] # filtering train 0.6 row ,selected cols
+test <- diamonds1[samples == 2, ]
+valid <- diamonds1[samples == 3, ]
+head(train)
+```
+
+```{r}
+train2 <- subset(diamonds1, select = c(-table, -color))
+```
+
+### filtering df
+
+```{r filtering }
+
+# study specific type of diamonds 
+diamonds2 <-  diamonds[diamonds$cut == "Ideal",]
+head(diamonds2)
+subset(diamonds, price > 10000 & color == "J") # study expensive diamonds attributes 
+```
+
+### ordering df
+
+```{r  order}
+# sorting order return number of sorted indexing 
+diamonds2 <- diamonds2[order(diamonds2$color, diamonds2$price, 
+               na.last = TRUE, decreasing = FALSE),-c(1,3,5)]
+head(diamonds2)
+```
+
+### spilting df
+
+```{r}
+# spilt data depend on grouping
+dfspilt <- split(diamonds, f = diamonds$cut, drop = TRUE)
+t <- dfspilt$Good  #dfspilt$Fair
+```
+
+### manipulation data
+
+```{r}
+t <- c(1.1, 1.1, 1.2)
+sampledataframe$t <- t
+sampledataframe <- cbind(sampledataframe, t2 = t)
+head(sampledataframe)
+sampledataframe <- transform(sampledataframe, 
+                     X1_sq = X1^2, 
+                     range = cut(X2, breaks = c(0,5, Inf)))
+sampledataframe$t <- NULL
+sampledataframe$X3 <- NULL
+sampledataframe$t2 <- NULL
+sampledataframe
+
+# add new rows 
+#dfComb <- rbind(dfBsp_s, dfNew_s)
+```
+
+### RDB
+
+what is relational database ?? series of df (tables) that together connected to show relations table for student and another for professor and .... that achieve goal business i have in my scenario explore that student have not good in sub1 (i ask professor why it's big important subject and related to work)
+
+![](images/RDB.png)
+
+we will go farther in another lesson anyway if you have idea about sql in R you can connect with database and do analyse here and you can do sql statemnt on dataframe
+
+### merge df
+
+```{r}
+student <- data.frame(student_id = c(1,2,3) ,student_name = c("a","b","c"))
+teacher <- data.frame(teacher_id = c(1,2,3,4) ,teacher_name = c("d","e","f","g"),student_id =c(2,1,2,NA))
+                      
+dftemp <- merge(x = student, y = teacher, 
+                by.x = c("student_id"), by.y = c("student_id")) # all.y = TRUE
+head(dftemp)
+
+dftemp <- merge(x = student, y = teacher, 
+                by.x = c("student_id"), by.y = c("student_id"),all.x = TRUE)
+head(dftemp)
+
+dftemp <- merge(x = student, y = teacher, 
+                by.x = c("student_id"), by.y = c("student_id"),all.y = TRUE)
+head(dftemp)
+
+dftemp <- merge(x = student, y = teacher, 
+                by.x = c("student_id"), by.y = c("student_id"),all  = TRUE)
+head(dftemp)
+```
+
+## list :
+
+A list can even contain matrices, data frames, or functions as its elements.
+
+```{r}
+customer <- list(name = "x",tilte ="y" , tel = 123L, comment =list("1","2"))
+customer$name
+```
+
+```{r quiz13, echo=FALSE}
+quiz(
+  question(" all elements in list should be same length whereas dataframe 
+           elements can take any length",
+    answer("True"),
+    answer("false", correct = TRUE)
+  ),
+  
+  question(" how many factors in diamonds  ?",
+     answer("3", correct = TRUE),
+     answer("5"),
+     answer("6")
+  ),
+  question(" how many diamonds their cut is ideal  ?",
+     answer("21551"),
+     answer("13791"),
+     answer("4906", correct = TRUE)
+  ),question(" what mean of price  ?",
+     answer("3933"),
+     answer("3989"),
+     answer("2401", correct = TRUE)
+  )
+)
+
+```
+
+🔍 define variables and discover types of this variables and show them using cat
+
+```{r exe13, echo=FALSE ,exercise=TRUE}
+
+
+```
+
+## selecting right data
+
+![](images/select_right_data.png){width="700"}
+
+How the data will be collected : 
+
+-   **Data sources : Second/third-party data**
+
+<!-- -->
+
+-   **Solving your business problem**
+
+-   **How much data to collect**
+
+-   **Time frame**
+
+## data format
+
+![](images/data_format.png)
+
++--------------------------------+---------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Data Format Classification** | **Definition**                                    | **Examples**                                                                                                                                                           |
++:===============================+:==================================================+:=======================================================================================================================================================================+
+| Primary data                   | Collected by a researcher from first-hand sources | \- Data from an interview you conducted Data from a survey returned from 20 participants                                                                               |
+|                                |                                                   |                                                                                                                                                                        |
+|                                |                                                   | -   Data from questionnaires you got back from a group of workers                                                                                                      |
++--------------------------------+---------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| | Secondary data               | | Gathered by other people or from other research | | - Data you bought from a local data analytics firm's customer profiles - Demographic data collected by a university - Census data gathered by the federal government |
++--------------------------------+---------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
++--------------------------------+---------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------+
+| **Data Format Classification** | **Definition**                                          | **Examples**                                                                                                                          |
++:===============================+:========================================================+:======================================================================================================================================+
+| Internal data                  | Data that lives inside a company's own systems          | \- Wages of employees across different business units tracked by HR                                                                   |
+|                                |                                                         |                                                                                                                                       |
+|                                |                                                         | \- Sales data by store location Product inventory levels across distribution centers                                                  |
++--------------------------------+---------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------+
+| | External data                | |  Data that lives outside of a company or organization | |  National average wages for the various positions throughout your organization - Credit reports for customers of an auto dealership |
++--------------------------------+---------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------+
+
++--------------------------------+-------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| **Data Format Classification** | **Definition**                                              | **Examples**                                                                                                                                  |
++:===============================+:============================================================+:==============================================================================================================================================+
+| Continuous data                | Data that is measured and can have almost any numeric value | \- Height of kids in third grade classes (52.5 inches, 65.7 inches)                                                                           |
+|                                |                                                             |                                                                                                                                               |
+|                                |                                                             | Runtime markers in a video - Temperature                                                                                                      |
++--------------------------------+-------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| | Discrete data                | | Data that is counted and has a limited number of values   | |  Number of people who visit a hospital on a daily basis (10, 20, 200) - Room's maximum capacity allowed - Tickets sold in the current month |
++--------------------------------+-------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+
+| 
+
++--------------------------------+----------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------+
+| **Data Format Classification** | **Definition**                                                       | **Examples**                                                                                                              |
++:===============================+:=====================================================================+:==========================================================================================================================+
+| Qualitative                    | Subjective and explanatory measures of qualities and characteristics | \- Exercise activity most enjoyed                                                                                         |
+|                                |                                                                      |                                                                                                                           |
+|                                |                                                                      | \- Favorite brands of most loyal customers                                                                                |
+|                                |                                                                      |                                                                                                                           |
+|                                |                                                                      | -   Fashion preferences of young adults                                                                                   |
++--------------------------------+----------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------+
+| | Quantitative                 | | Specific and objective measures of numerical facts                 | | - Percentage of board certified doctors who are women - Population of elephants in Africa - Distance from Earth to Mars |
++--------------------------------+----------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------+
+
++--------------------------------+--------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Data Format Classification** | **Definition**                                                     | **Examples**                                                                                                                                                               |
++:===============================+:===================================================================+:===========================================================================================================================================================================+
+| Nominal                        | A type of qualitative data that isn't categorized with a set order | \- First time customer, returning customer, regular customer - New job applicant, existing applicant, internal applicant - New listing, reduced price listing, foreclosure |
++--------------------------------+--------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Ordinal                        |  A type of qualitative data with a set order or scale              | \- Movie ratings (number of stars: 1 star, 2 stars, 3 stars) - Ranked-choice voting selections (1st, 2nd, 3rd) - Income level (low income, middle income, high income)     |
++--------------------------------+--------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
++--------------------------------+---------------------------------------------------------------+----------------------------------------------+
+| **Data Format Classification** | **Definition**                                                | **Examples**                                 |
++:===============================+:==============================================================+:=============================================+
+| Structured data                | Data organized in a certain format, like rows and columns     | \- Expense reports                           |
+|                                |                                                               |                                              |
+|                                |                                                               | \- Tax returns                               |
+|                                |                                                               |                                              |
+|                                |                                                               | -   Store inventory                          |
++--------------------------------+---------------------------------------------------------------+----------------------------------------------+
+| | Unstructured data            | | Data that isn't organized in any easily identifiable manner | |  \| - Social media posts - Emails - Videos |
++--------------------------------+---------------------------------------------------------------+----------------------------------------------+
+
+```{r quiz14, echo=FALSE}
+quiz(
+  question(" Data collected from outside sources who did not collect it directly?",
+    answer("First-party data"),
+    answer("second-party data"),
+    answer("third-party data",correct = TRUE)
+  ),
+  
+  question("Data collected by an individual or group using their own resources",
+     answer("First-party data",correct = TRUE),
+     answer("second-party data"),
+      answer("third-party data")
+  ),
+  
+  question(" Data provided from outside sources who did not collect it directly?",
+    answer("First-party data"),
+     answer("second-party data",correct = TRUE),
+      answer("third-party data")
+  ),
+  question(" Data that is measured and can have almost any numeric value",
+    answer("Structured data"),
+     answer("Discrete data"),
+      answer("Continuous data",correct = TRUE)
+  ),
+   question("Data that is counted and has a limited number of values",
+    answer("Structured data"),
+     answer("Discrete data",correct = TRUE),
+      answer("Continuous data")
+  ),
+   question("Data organized in a certain format such as rows and columns",
+    answer("Structured data",correct = TRUE),
+    answer("Discrete data"),
+    answer("Continuous data")
+  ),
+  question("Data that lives and is generated outside of an organization",
+    answer("External data",correct = TRUE),
+    answer("Internal data")
+    
+  ),
+   question("Qualitative data with a set order or scale",
+    answer("Nominal data"),
+    answer("ordinal data",correct = TRUE)
+  ),
+   question("Qualitative data that is categorized without a set order",
+    answer("Nominal data",correct = TRUE),
+    answer("ordinal data")
+  )
+)
+```
+
+![](images/categorial_numeric.png)
+
+## class
+
+> know data structure
+
+```{r}
+class(diamonds)
+class(mat)
+class(vec)
+```
+
+## logical agian
+
+```{r}
+is.vector(vec); 
+is.logical(vec) 
+is.integer(vec)      
+is.numeric(vec)     
+is.character(vec)
+is.matrix(mat)
+is.factor(fac)
+is.data.frame(df)
+is.list(df)  
+```
+
+## remove objects
+
+```{r}
+rm(df)
+```
+
+🔍 play with is.\_\_ and class mode ...
+
+```{r exe15, echo=FALSE ,exercise=TRUE}
+
+
+```
+
+## generate vectors
+
+monitor codes and make comment
+
+```{r}
+vec1 <- 1:10
+vec2 <- seq(from = 0.5 ,to = 5 ,by = 0.5 )
+vec2 <- seq(from = 0.5 ,to = 5 , length.out = 10 )
+rep(vec1,10)
+rep(vec1,each =2)
+rep(vec1 ,times =10:1)
+vec3 <- rnorm(10)
+```
+
+```{r quiz15, echo=FALSE}
+quiz(
+  question(" vec2 <- seq(from = 1 ,to = 20 ,length.out = 39) what is vec2[5] ",
+    answer("2.5"),
+    answer("5"),
+    answer("3", correct = TRUE)
+  ),
+  
+  question(" vec1 <- rep(1:10,times =10:1) ,what length of vec1",
+    answer("55", correct = TRUE),
+    answer("20"),
+    answer("100"),
+    answer("42")
+  )
+)
+```
+
+## **arithmetic operation between vectors**
+
+```{r}
+
+vec1 + vec2 
+vec1 * vec2
+vec1 - vec3
+vec1 / vec3
+vec1^2
+```
+
+```{r}
+mat2 <- mat
+mat + mat2
+mat * mat2
+```
+
+> notice when multiple two matrix element by element
+
+🔍 define random and sequence vectors and do operations between them
+
+```{r exe16, exercise=TRUE}
+
+```
+
+do another operation on matrix ?
+
+📋 how can multiple two matrix depend on math (optional)
+
+📋 what is the best student in mat ?
+
+📋 inverse matrix
+
+```{r}
+temp <- t(mat)
+summary(temp)
+solve(mat) %*% mat
+mat %*% mat2
+```
+
+how can i know distribution of grade student in one blick ?
+
+scenario : i have 10000 student and will see distribution in math subject ?
+
+scenario : student that attend lectures have high degrees ?
+
+```{r}
+data <- runif(10000,0,100)
+hist(data,20)
+plot(data[1:100])
+boxplot(data)
+```
+
+r is big but you know that fun x help you to answer your problem
+
+1.  help method
+2.  search in internet
+
+```{r}
+# ?hist
+# ?plot
+# ?boxplot
+args(cat)
+```
+
+know variable in your enviroment
+
+```{r}
+ls()
+
+```
+
+import data using UI
+
+🔍 import data and apply different thing and plots
+
+```{r exe17,exercise=TRUE}
+
+```
+
+## simple conditions
+
+```{r}
+grade <- c(50,80)  # read from console using scan
+
+if (grade < 60 ){
+  print("Failed")
+} else{
+  print("accepted")
+}
+
+if(grade[1] < 60){
+  print("failed")
+} else if(grade[1] >= 60 &grade[1] < 70){
+  print("acceptable")
+} else if(grade[1] >= 70 & grade[1] < 80){
+  print("good")
+} else if(grade[1] >=80 & grade[1] < 90){
+  print("very good")
+} else if(grade[1] >=90 & grade[1] <= 100){
+  print("perfect")
+}
+
+```
+
+## define function
+
+suppose you want to use operations many times (\*./,+,-)
+
+```{r}
+operations <- function(a,b){
+  cat ("firstnumber is" ,a ,"\n")
+  #print("secondnumber is" ,b)
+  cat("sum : ", a+b,"\n")
+  cat("sub : ", a-b,"\n")
+  cat("prod : ", a*b,"\n")
+  cat("div : ", a/b,"\n")
+}
+operations(1,2)
+
+
+
+
+evaluategrade <- function(x){
+  if(x < 60){
+  print("failed")
+} else if(x >= 60 & x < 70){
+  print("acceptable")
+} else if(x >= 70 & x < 80){
+  print("good")
+} else if(x >=80 & x < 90){
+  print("very good")
+} else if(x >=90 & x <= 100){
+  print("perfect")
+}
+} # end fun
+evaluategrade(20)
+evaluategrade(60)
+evaluategrade(65)
+evaluategrade(70)
+evaluategrade(75)
+evaluategrade(80)
+evaluategrade(85)
+evaluategrade(90)
+evaluategrade(95)
+evaluategrade(100)
+evaluategrade(105)
+evaluategrade(-1)
+evaluategrade("mm")
+# debug 
+debug(evaluategrade)
+undebug(evaluategrade)
+```
+
+> **function** reusable codes for special task \>\> readable shorter codes
+>
+> divide and conquer (skim /structutre of program API)
+
+> ***packages*** contain code, data, and documentation in a standardised collection format 
+
+protect code
+
+```{r}
+evaluategrade <- function(x){
+  # protect code 
+  if(!is.numeric(x)) warning("grade should be numeric vales")
+  if( grade < 0) warning("grade should be postive")
+  if( grade < 0) warning("grade should be postive")
+  
+  if(x < 60){
+  print("failed")
+} else if(x >= 60 & x < 70){
+  print("acceptable")
+} else if(x >= 70 & x < 80){
+  print("good")
+} else if(x >=80 & x < 90){
+  print("very good")
+} else if(x >=90 & x <= 100){
+  print("perfect")
+}
+} # end fun
+evaluategrade(105)
+evaluategrade(-1)
+evaluategrade("mm")
+# debug 
+debug(evaluategrade)
+undebug(evaluategrade)
+```
+
+## simple for
+
+```{r}
+stars <- 10
+for(i in 1:stars)
+{
+  cat("*")
+}
+vecres <- NULL
+for (ind in 1:length(grade)) {
+   vecres <- evaluategrade(grade[ind])
+}
+
+fun <- function(){
+  for (ind in 1:length(grade)) {
+   vecres <- evaluategrade(grade[ind])
+}
+}
+debug(fun)
+undebug(evaluategrade)
+```
+
+🔍 import data and apply different thing and plots using for
+
+## measure performance(metrics)
+
+-   accuracy (all test situation passed )
+
+-   time
+
+-   memory
+
+`memory`
+
+```{r}
+object.size(data)
+78.125/1024 
+```
+
+📋 you have big data you don't sure if you have enough memory space to process this data ?
+
+<div>
+
+length of data 10000 \* 8 bytes = 80000/1024 = 78.125 kb = 0.07629395 mb
+
+</div>
+
+📋 suppose you have 120 col of numeric value and 5000000
+
+```{r}
+ requiredmemory <- 120*5000000*8/(1024*1024)
+ requiredmemory  # 4577.637 mb 
+```
+
+**`time`**
+
+```{r}
+options(scipen = 995)
+ n <- 10000001  # 100000000
+vec <- seq(1,n,by = 2)
+
+system.time(sum(vec))
+
+start <-proc.time()
+sum = 0
+for (t in 1:length(vec)) {
+  sum <- sum + vec[t]
+}
+sum
+end <-proc.time()
+end- start
+```
+
+> performance of vectors is better than loops
+>
+> avoid loops when it's possible to use vectors
+
+```{r quiz18, echo=FALSE}
+quiz(
+  question(" what requird momery for 3 numeric col and 100?",
+    answer("300 bytes"),
+    answer("900" ),
+    answer("2400", correct = TRUE)
+  ),
+  
+  question(" loops run quicker than vectors?",
+    answer("False", correct = TRUE),
+    answer("True")
+  )
+)
+
+```
+
+## more operation with vectors
+
+1.  fetch data
+
+    ```{r}
+    semster1 <- c(50,70,60,20,30,50,60,90,100,NA,NA)
+    semster2 <- c(59,67,39,21,32,60,40,20,30,59,NA,NA)
+    ```
+
+<!-- -->
+
+2.  merges data
+
+    ```{r}
+    grades <- c(semster1,semster2)
+    ```
+
+3.  handling with missing values
+
+    ```{r}
+    missing_data_rate = is.na(grades)/length(grades)
+    !is.na(grades) -> Ind
+    grades <- grades[Ind]
+    ```
+
+<!-- -->
+
+4.  operations union and diff between two group
+
+    ```{r}
+    unique(grades)
+    union(semster1,semster2)
+    intersect(semster1,semster2)
+    setdiff(semster1,semster2)
+    ```
+
+<!-- -->
+
+5.  logical operation
+
+    ```{r}
+    duplicated(semster2)
+    identical(semster1 , semster2)
+    all.equal(c(4, 5, 6), c(4, 5, 6)) 
+    isTRUE(all.equal(c(4, 5, 6), c(4, 5, 6)))
+    any(semster1, semster2)
+    all(semster1 == semster2)
+    which(semster1 < semster2)
+    ```
+
+6.  order data
+
+    ```{r}
+    sort(grades)
+    ```
+
+7.  distribution of data
+
+    ```{r}
+    max(grades)
+    min(grades)
+    range(grades)
+
+    sum(grades)
+    mean(grades)
+    summary(grades)
+    ```
+
+<!-- -->
+
+8.  quantile
+
+    ```{r}
+    median(grades)
+    quantile(grades)
+    quantile(grades, probs = c(0,0.6,0.7,0.8,0.9,1)) 
+    boxplot(grades)
+    ```
+
+<!-- -->
+
+9.  more operations
+
+    ```{r}
+    cumsum(grades)
+    diff(grades)
+    hist(grades)
+
+    evaluategrades <- case_when((grades <= 60)                ~ "failed",
+                              (grades > 60) & (grades <= 70) ~ "passed",
+                              (grades > 70) & (grades <= 80)  ~ "god",
+                              (grades > 80) & (grades <= 90)  ~ "very god",
+                              (grades > 90) & (grades <= 100)  ~ "excellent",
+                              )
+    as.vector(evaluategrades)
+    # replacing
+    evaluategrades <- car::recode(evaluategrades, "'very god'='very good'; 'god'='good'")
+    ```
+
+🔍 play with this example and answer question
+
+```{r exe19, exercise=TRUE}
+# you can name element of vectors
+customers_Bank1 <- c(customer1 = "cus1",customer2 = "cus2",customer5 = "cus5")
+customers_Bank2 <- c(customer3 = "cus3",customer4 = "cus4",customer5 = "cus5")
+
+# merge customers 
+customers_Bank <- ..........
+customers_Bank
+# customers should be without duplicted names
+customers_Bank_no_duplicate <- .........
+customers_Bank_no_duplicate
+# sort them
+sorted_customers <- ...........
+sorted_customers
+
+```
+
+```{r exe19-solution}
+# you can name element of vectors
+customers_Bank1 <- c(customer1 = "cus1",customer2 = "cus2",customer5 = "cus5")
+customers_Bank2 <- c(customer3 = "cus3",customer4 = "cus4",customer5 = "cus5")
+
+# merge customers 
+customers_Bank <- c(customers_Bank1 , customers_Bank2)
+customers_Bank
+# customers should be without duplicted names
+customers_Bank_no_duplicate <- unique(customers_Bank)
+customers_Bank_no_duplicate
+# sort them
+sorted_customers <- sort(customers_Bank_no_duplicate)
+sorted_customers
+
+```
+
+```{r exe20, exercise=TRUE}
+# you can do this with dataframe easier but here you learn how to spilt 
+# complex statement to smaller pieces (divide and conquer)
+sorted_customers <- c("c1","c2","c3","c4","c5","c6","c7","c8","c9","c10")
+balance <- c(100,200,500,400,300,2000,1500,3000,2000,1000)
+gender <c("f","m","f","m","f","m","f","m","f","m")
+# number of male / female (2 lines of code)
+
+
+#what name of person who have the biggest balance 
+max_balance <- 
+ind_max_balance <-
+name_of_customer_with_biggest_balance <-
+# who have more balance male or female 
+# get ind of male and sum this indices in balance (2 lines)
+ 
+   
+#get ind of female and sum this indices in balance (2 lines)
+ 
+   
+# compare between them using if_statement  
+```
+
+```{r exe20-solution}
+# you can do this with dataframe easier but here you learn how to spilt 
+# complex statement to smaller pieces (divide and conquer)
+sorted_customers <- c("c1","c2","c3","c4","c5","c6","c7","c8","c9","c10")
+balance <- c(100,200,500,400,300,2000,1500,3000,2000,1000)
+gender <c("f","m","f","m","f","m","f","m","f","m")
+# number of male / female (2 lines of code)
+
+
+#what name of person who have the biggest balance 
+max_balance <- max(balance)
+ind_max_balance <- which(max_balance)
+name_of_customer_with_biggest_balance <- sorted_customers(ind_max_balance)
+# who have more balance male or female 
+# get ind of male and sum this indices in balance (2 lines)
+ ind_of_male <- which(gender == "m")
+ ind_of_female <- which(gender == "f")   
+#get ind of female and sum this indices in balance (2 lines)
+ sum_money_male <- sum(balance[ind_of_male])
+ sum_money_female <- sum(balance[ind_of_female])  
+# compare between them using if_statement  
+ if(sum_money_male < sum_money_female){
+   cat("women  have more money")
+ }elseif(sum_money_male > sum_money_female){
+   cat("men  have more money")
+ }else{
+   cat("they have same amount of money")
+ }
+```
+
+🔍 open question define df1: student ,semster, grades df2:teacher and do multiple operations
+
+```{r exe21,exercise=TRUE}
+
+```
+
+## data analyst
+
+![](images/model.png){width="486"}
+
+inform about scenario and skateholder :
+
+you hired as data analyse in private university , they notice that they don't have work after graduation
+
+your work is to improve performance of university ?
+
+-   understand context
+
+-   what is the root problem ask why why why ???
+
+-   imagine big problem and small component in it what is big picture and detial oriented thinking
+
+-   visualizations and summary to explore date and correlation /causation
+
+-   for example government provide(over country) data but you should select interested area
+
+-   see another samiliar project in your subject (maybe make your work quicker )
+
+<!-- -->
+
+-   what is your goal business ? (improve performance of uni)
+
+<!-- -->
+
+-   have discussion with chef of university and if they can provide you their data
+
+-   search for data for another university in same region (compare system)
+
+-   depend on your data and not your experience or gut instinct (but there is knowledge)
+
+-   have survey with student (questions )
+
+-   what is SOW
+
+    ```{r}
+    #search for another sources 
+       # browseURL("https://plan.io/blog/scope-of-work/")
+    ```
+
+![](images/six%20problem.png){width="800"}
+
++-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| term                    | definition                                                                                                                                                                 |
++=========================+============================================================================================================================================================================+
+| making predictions      | using data to make an informed decision about how things may be in the future (grade of student in third semester depend on previous semester grades and attend pro cent ) |
++-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| categorizing things     | assigning information to different groups or clusters based on common futures                                                                                              |
+|                         |                                                                                                                                                                            |
+|                         | group or cluster student to different groups                                                                                                                               |
++-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| spotting sth unusual    | identifying data that is different from usual                                                                                                                              |
+|                         |                                                                                                                                                                            |
+|                         | (student have poor result in some subjects)                                                                                                                                |
++-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| identifying themes      | grouping categorized info into broader concepts                                                                                                                            |
++-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| discovering connections | finding similar challenges faced by different entities and combining data and insights to adress them                                                                      |
++-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| finding patterns        | using historical data to understand what happened in the past and therefore likely to happen again                                                                         |
++-------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+🔍 question :
+
+9999你的中文名字叫什么？
+
+> ask \>\>tidy data \>\>detect pattern (chinese ) \>\> transform to your language \>\> answer in your language \>\> translate
+
+> CRAN
+
+> get help and online presence
+
+-   stack overflow
+
+-   r-project
+
+-   github
+
+-   kaggle
+
+-   notebooks and cheatsheets
+
+-   coursera
+
+## Smart Questions
+
+remember data formats
+
+![](images/smart%20question.png)
+
+make documentation !!
+
+## Report & dashboards
+
+**Report: static collection of data given to stakeholders periodically**
+
+| **pros**                    | cons                   |
+|-----------------------------|------------------------|
+| High-level historical data  | continual maintenance  |
+| Easy to design              | Lessvisually appealing |
+| Pre-cleaned and sorted data | Static                 |
+
+Dashboard Monitors Live , incoming data
+
+|                                     |                            |
+|-------------------------------------|----------------------------|
+| **Pros**                            | **Cons:**                  |
+| Dynamic. Automatic, and interactive |  can be confusing          |
+| More stakeholder access             | visually appealing         |
+| Low maintaince                      | potentially uncleaned data |
+
+![](images/agile_dashboard.jpg)
+
+```{r}
+browseURL("https://www.boldbi.com/dashboard-examples/agile")
+```
+
+Data science : creating new ways of modeling and understanding the unknown by using raw data
+
+![](images/job%20description.png)
+
+## install packages
+
+| library name  | definition                           |
+|---------------|--------------------------------------|
+| ggplot2       | visualization of data                |
+| dplyr         | transformation of dataframes         |
+| tidyr         | tidy and clean dataframes            |
+| purr          | deal with list(datastructures)       |
+| stringr       | deal with strings                    |
+| forcats       | deal with factors / categorical data |
+| rmarkdown     | documentation and communication      |
+| shiny         | interactive UI /web development      |
+| flexdashboard | create dashboards                    |
+| lubridate     | deal with Dates and Times            |
+| knitr         | generate automatically reports       |
+| TR            | Machine Learning                     |
+| tidymodels    | model of machine learning            |
+| Sparklyr      | Big Data                             |
+| Plumber       | web -api                             |
+| Reticulate    | work together R and python           |
+| haven         | import data SPSS, Stata und SAS      |
+| devtools      | develop r script                     |
+| R.utils       | programming tools                    |
+
+```{r}
+install.packages("tidyverse")
+# you can't use its function you need to load it 
+library(tidyverse)
+```
+
+suppose you have two packages have same function than there is conflict
+
+\>\> solution package name::function name
+
+```{r}
+#dplyr::union(vc1, vc2)
+```
+
+### settings
+
+```{r}
+# settings
+#options()   # list of settings
+
+
+getOption("defaultPackages")	# list of packages
+getOption("digits")           # 67,----- 
+getOption("echo")             # s how output  defaulttrue
+getOption("papersize")     	#  Default: a4
+getOption("show.error.messages") # Anzeige Fehlermeldungen - Default: TRUE
+getOption("timeout")    		# Timeout - Default: 60
+getOption("width")    		   # num_character_per_row  - Default: 80
+
+
+
+# change options 
+options("digits" = 6, "width" = 75)
+getOption("digits"); getOption("width")   
+
+```
+
+## SOW (scope of work)
+
+![](images/pdf_sow1.png)
+
+![](images/pdf_sow2.png)
+
+![](images/pdf_sow3.png)
+
+![](images/pdf_sow4.png)

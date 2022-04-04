@@ -1,0 +1,276 @@
+---
+title: "animation"
+author: "Bakro"
+date: "12/5/2021"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r}
+library(gapminder)
+datos = gapminder
+# ?gapminder
+head(datos)
+datos = datos %>% filter(year >= 1992)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+grafico <- datos %>%
+  ggplot() + 
+    geom_point(aes(x = gdpPercap, y = lifeExp, col = continent, size = pop), alpha = 0.8) + theme_minimal() + 
+    theme(legend.position = "bottom") + guides(size = "none") + 
+    labs(x = "PIB per Capita" ,y = "Esperanza de Vida",  col = "") 
+
+grafico
+```
+
+Now we can create the animation simply by passing the transaction function. Just with this function gganimate will create the animation. Yes, just with a function we can create an animation. Let's see it:
+
+```{r}
+library(gganimate)
+
+grafico +
+  transition_time(year)
+```
+
+### Adjusting our animations in R
+
+1.  Indicating the number of frame on the transition One of the key aspects of a good animation is that the user knows why the graph is moving, that is, that the user knows what each moment on the animation means.
+
+To do so, the gganimate functions includes a really interesting functionality: to include those variables on ggplot labs function. As you can see in the table below, each transaction function has each own variable that we should include in the labs. In the case of transitimo_time the variable is frame_time.
+
+| Name of the function  | Labs variable                                      |
+|:----------------------|:---------------------------------------------------|
+| transition_components | frame_time                                         |
+| transition_events     | frame_time                                         |
+| transition_filter     | previous_filter, closest_filter, next_filter       |
+| transition_layer      | previous_layer, closest_layer, next_layer, nlayers |
+| transition_manual     | previous_frame, current_frame, next_frame          |
+| transition_reveal     | frame_along                                        |
+| transition_states     | previous_state, closest_state, next_state          |
+| transition_time       | frame_time                                         |
+
+```{r}
+grafico +
+  transition_time(year) +
+  labs(title = "year: {frame_time}")
+
+grafico + facet_wrap(~continent) +
+  transition_time(year) +
+  labs(title = "Year: {frame_time}")
+```
+
+### **Let the view follow the data in each frame**
+
+```{r}
+grafico + transition_time(year) +
+  labs(title = "Year: {frame_time}") +
+  view_follow(fixed_y = TRUE)
+```
+
+### **Show preceding frames with gradual falloff**
+
+This shadow is meant to draw a small wake after data by showing the latest frames up to the current. You can choose to gradually diminish the size and/or opacity of the shadow. The length of the wake is not given in absolute frames as that would make the animation susceptible to changes in the framerate. Instead it is given as a proportion of the total length of the animation.
+
+```{r}
+grafico + transition_time(year) +
+  labs(title = "Year: {frame_time}") +
+  shadow_wake(wake_length = 0.1, alpha = FALSE)
+```
+
+### **Show the original data as background marks**
+
+```{r}
+grafico + transition_time(year) +
+  labs(title = "Year: {frame_time}") +
+  shadow_mark(alpha = 0.3, size = 0.5)
+```
+
+As you can see the date is included in the title but... it is small, it is out of the graph and disables to use the title for telling other things... That is why I don't like this option.
+
+In my opinion, **it is much more visual and impactful to include the data on the same graph with an extra ggplot layer**. In this way, we can use the title for whatever we want, we can give the transition state the look and feel that we want and it's within the graph. Let's see an example:
+
+```{r}
+grafico +
+  geom_text(aes(x = min(gdpPercap), y = min(lifeExp), label = as.factor(year)) , hjust=-2, vjust = -0.2, alpha = 0.2,  col = "gray", size = 20) +
+  transition_states(as.factor(year), state_length = 0)
+```
+
+As you can see, in this case, I have used the function `transition_states` instead of `transition_time` and I have also change the year variables to a factor. The reason is that the transition functions interpolate numeric data, which makes it look terribly bad. When we convert the number into a factor the problem disappears.
+
+Besides, I have also included the parameter `state_length` to be zero. This parameter allows us to control for how long will pause before changing to the new state. In my case, I will set as zero, because with higher values the transition wouldn't be smooth.
+
+Esta variable permite controlar el tiempo que la animación debe 'detenerse' cuando llegas a un nuevo estado. En mi caso, lo pongo a cero porque sino nuestra animación iría a tirones y quedaría feo, pero en otros casos donde se quieren marcar las diferencias, puedes incrementarlo.
+
+That being said, let's see how to keep improving our animations!
+
+### **Show the growth by freeing the scales of the animation**
+
+If you have notices, the scales of the animation do not change during the animation. This generates two things:
+
+-   The growth is not that well represented. By having the final value visible from the beginning, we do not have as much growth prospects.
+
+-   If the scale is very wide and the initial values are low (for example in aggregate data), we lose perspective of what happens at the beginning, when the values are low.
+
+If we want to avoid this and we want to better see how the variables grow, **it is better to adjust the scale in each frame**. For this, we will use the `view_follow` function.
+
+A very clear impact of this issue is the impact on the evolution graphs. Let's see an example of the evolution of the Spanish GDP.
+
+```{r}
+datos %>%
+  filter(country == "Spain") %>%
+  ggplot(aes(year, pop)) + geom_point() + geom_line() +
+  theme_minimal() +
+  transition_reveal(year)
+```
+
+As you can see, as we do not change the scales, the plot does not look that alive and it's not so impactful. However, i**f we make the axis scales change automatically the speed of the change will make us better see how the GPD per Capita has evolved**.
+
+```{r}
+datos %>%
+  filter(country == "Spain") %>%
+  ggplot(aes(year, pop)) + geom_point() + geom_line() + 
+  geom_text(aes(x = min(year), y = min(pop), label = as.factor(year)) , hjust=-2, vjust = -0.2, alpha = 0.5,  col = "gray", size = 20) +
+  theme_minimal() +
+  transition_reveal(year) + 
+  view_follow()
+```
+
+As you can see, these two tricks have suppose a significant improvement in our animation. But there is still a very important thing to learn: the animation renderization.
+
+```{r}
+p <- ggplot(
+  airquality,
+  aes(Day, Temp, group = Month, color = factor(Month))
+  ) +
+  geom_line() +
+  scale_color_viridis_d() +
+  labs(x = "Day of Month", y = "Temperature") +
+  theme(legend.position = "top")
+p + 
+  geom_point(aes(group = seq_along(Day))) +
+  transition_reveal(Day)
+```
+
+```{r}
+library(dplyr)
+mean.temp <- airquality %>%
+  group_by(Month) %>%
+  summarise(Temp = mean(Temp))
+mean.temp
+
+p <- ggplot(mean.temp, aes(Month, Temp, fill = Temp)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Reds", direction = 1) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    panel.grid.major.y = element_line(color = "white"),
+    panel.ontop = TRUE
+  )
+
+
+p + transition_states(Month, wrap = FALSE) +
+  shadow_mark()
+
+# p + transition_states(Month, wrap = FALSE) +
+#   shadow_mark() +
+#   enter_grow() +
+#   enter_fade()
+```
+
+**Rendering: the key to create incredible animations in R**
+
+### **Frames and duration: the key for a good visualization**
+
+To render is to convert our R commands into an animation. **Is at this step when we can personalize a lot of the key elements of our animations**, such as:
+
+-   **The width and height of the animation** to create an animation that it is correctly seen on the device that we want to see it.
+
+-   **Duration, number of frames, and number of frames per second (fps)**: this will make you the animation see fluently.
+
+-   **Output file format**: if you don't want to create a gif, you can also create a video too.
+
+To render our animation first we need to save the result of the animation as an object. By doing so, we can now pass this object to the `animate` function. This function has many other parameters with which we can adjust the things we have commented on previously.
+
+-   fps: the human being is able to distinguish between 10 and 12 frames per second. If we add more frames, the brain does not see many images together, but rather it sees an animation ([link](https://en.wikipedia.org/wiki/Frame_rate)).Thus, the fps parameter should always be higher than 12. I would recommend setting it at 25fps, as it balances between fluentness and lightness.
+
+-   duration: it sets for how long should the animation long. This will depend on the number of states that we have. In my opinion, for transitions with a lot of states, I would set the state to last for 0.5 seconds. Anyway, there is not a global option and I would recommend trying several durations.
+
+### **Example: bar chart race**
+
+Now we will apply everything that we have learned on how to create animations in R with gganimate to create an awesome animation: a bar chart race.
+
+To create our bar chart race we will analyze the evolution of the countries with the highest GDP per capita on the `gapminder` dataset. To do so, first, we need to get the rank the countries on each year. This is something that we can easily do with `dplyr`:
+
+```{r}
+datos2 <- datos %>%
+  group_by(year) %>%
+  arrange(year, desc(gdpPercap)) %>%
+  mutate(ranking = row_number()) %>%
+  filter(ranking <=15)
+
+head(datos2)
+```
+
+After that, we can easily create the bar chart race animation with gganimate. In this case, we will include the functions `enter_fade` and `exit_fade`, which will create a fade off effect when the countries appear or disappear. Besides, we will use the function `ease_aes` to create a non-linear animation that looks better:
+
+```{r}
+animacion <- datos2 %>%
+  ggplot() +
+  geom_col(aes(ranking, gdpPercap, fill = country)) +
+  geom_text(aes(ranking, gdpPercap, label = gdpPercap), hjust=-0.1) +
+  geom_text(aes(ranking, y=0 , label = country), hjust=1.1) + 
+  geom_text(aes(x=15, y=max(gdpPercap) , label = as.factor(year)),
+            vjust = 0.2, alpha = 0.5,  col = "gray", size = 20) +
+  coord_flip(clip = "off", expand = FALSE) +
+  scale_x_reverse() +
+  theme_minimal() + 
+  theme(
+    panel.grid = element_blank(), 
+    legend.position = "none",
+    axis.ticks.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = margin(1, 4, 1, 3, "cm")
+  ) +
+  transition_states(year, state_length = 0, transition_length = 2) +
+  enter_fade() +
+  exit_fade() + 
+  ease_aes('quadratic-in-out') 
+
+animate(animacion, width = 700, height = 432, fps = 25, duration = 15, rewind = FALSE)
+```
+
+### **Conclusion on how to create animations in R: taking the graphs to the next level**
+
+Knowing how to create animation in R is something very easy, but very practical too. If you want to create graphs that have a higher impact and you have the chance of showing that graph as an animation, I would recommend you to do so. But animations are more useful than that.
+
+In my case, for example, I have used the animations to explain in a super simple and visual way how the K-means algorithm works ([link](https://anderfernandez.com/en/blog/code-k-means-from-scratch-in-r/)). This could also be used on how neural networks work or how a neural network performance improves with more learning. We could even use animations on sports analytics!
+
+In summary, whatever your work is, I hope that you have found interesting learning how to create animations in R with gganimate.
+
+As always, if you would like me to write about a specific topic, do not hesitate to reach out on [Linkedin](https://www.linkedin.com/in/ander-fernandez/). See you at the next one!
+
+### **Save animation**
+
+If you need to save the animation for later use you can use the `anim_save()` function.
+
+It works much like `ggsave()` from ggplot2 and automatically grabs the last rendered animation if you do not specify one directly.
+
+

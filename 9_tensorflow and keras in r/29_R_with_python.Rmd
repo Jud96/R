@@ -1,0 +1,181 @@
+---
+title: "R_with_python"
+author: "Bakro"
+date: "12/5/2021"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R_with_python
+
+Python and R are two of the main programming languages used for data science. Both are great, they are very used and they both have huge communities behind. For sure you will feel more comfortable with one of the two, but depending on the task you will do there is always one that is better than the other one. We have already explained how to use R within Python. So, today we will learn how to use Python in R. Can you imagine the possibilities of combining both languages on your RMarkdown or Shiny Apps? It sounds great, right? So let's get into it!
+
+## **Reticulate: combining languages has never been so easy**
+
+While in Python we use `rpy2`to use R (check out [this post](https://anderfernandez.com/en/blog/how-to-program-with-python-and-r-in-the-same-jupyter-notebook/) for more info), in R we have the `reticulate` package to use Python. Luckily, [reticulate](https://rstudio.github.io/reticulate/) its much easier to install and use than `rpy2`. So, let's learn how to use it!
+
+```{r}
+# install.packages("reticulate")
+library(reticulate)
+
+use_condaenv("ML_workshop")
+use_python(Sys.getenv("CONDA_PERFIX"))
+                         
+```
+
+### **Choose your Python version**
+
+The first thing that we need to do is to choose the Python version that we want to use. There are three ways of choosing your version:
+
+1.  Use `use_python`function. You simply have to indicate the path to the folder where you have Python installed. If this is the case, you might probably want to use the `file.choose` function to easily get the full path of the folder.
+
+2.  Using `virtualenv_root` function: this function enables you to select a virtual environment. [Virtual environments](https://docs.python.org/3/library/venv.html) work as independent Python installations, with their own libraries and paths.
+
+3.  If you have Anaconda or Miniconda environments you might want to use either `use_condaenv`or `use_miniconda`. If you want to know which environments you have, you can use the following code: `conda_list()[[1]]`. On the other hand, if you don't know where to find them, you will find [this link](https://docs.anaconda.com/anaconda/user-guide/tasks/integration/python-path/) useful.
+
+### **How to use Python in RMarkdown**
+
+Once you have settled your Python environment, using Python in R with reticulate in a RMarkdown file is very simple. You just need to indicate that the chunk will run Python code instead of R. To do so, instead of opening the chunk with {r}, use {python}.
+
+Example:
+
+```{python }
+# this code in python 
+a = "Hello" + " World"
+print(a)
+```
+
+As you can see, to use Python in RMarkdown you just need to indicate that the code you are writing is in Python. Besides, the basic RMarkdown configurations such as `echo`, `message` or `warning` will work the same regardless of the language you are using.
+
+Unfortunately, this way of coding has a drawback: **the variables you generate in R are not in your R environment, they are in the Python environment**. So, if I now check whether the variable `a` exists in R, it will return that it doesn't.
+
+```{r}
+exists("a")
+```
+
+To solve this we need to pass the variable from one environment to the other. Let's see how this is done!
+
+### **Changing variables between environments**
+
+When calling variables there are two possibilities: to call a Python variable from R or to call an R variable from Python.
+
+In any way, what reticulate does is to translate the data type from one environment to another data type of the other environment. As a result, an R vector will be translaed into a Python list, an R list will be translated into a tuple and an R dataframe will be translated into a Pandas data frame.
+
+On the following image we can see which translations does the package do:
+
+As you might have guessed these translations have a limit. For the time being, data types that are not on the list (such as a shapefile, for example) cannot be converted to the other environment
+
+Anyway, let's continue with the example and see how we can translate a variable from Python to R.
+
+#### **How to call Python variables from R**
+
+In order to call Python variables from R you just need to access those variables within the `py` object. Basically, `py` is your entrance in R to your Python environment.
+
+```{r}
+py$a
+```
+
+#### **How to call R variables from Python**
+
+You can also access any R variables from Python. To do so, you just need to access the `r` object in Python. Once again, `r` object is your entrance in Python to your R environment.
+
+```{r}
+b = "Good morning!"
+```
+
+```{python}
+r.b
+```
+
+As you can see, the way of accessing variables from one language to the other is super super simple (much simpler than in `rpy2`).
+
+So, we have just learned how to use Python in RMarkdown and how to use variables from one language in another one but... **can we use both languages on an R script too**? Yes, you can! Let's see how!
+
+### **Using R and Python on the same script**
+
+#### **Installing and loading libraries**
+
+If you use your Python environment, you will be able to access all the libraries that you have already installed. If you want to install new packages you can use both `pip`and `conda`.
+
+On the other hand, you work with Anaconda or a virtual environment, you can use Python packages from R. To do so, you will need to use `conda_install` for installing libraries on Anaconda or `py_install` to install them on your virtual environment.
+
+In my case, I will install `pandas` from reticulate.
+
+```{r}
+py_install("pandas")
+```
+
+#### **Running Python code in R**
+
+**In order to run Python code in R you just need to declare the variables in Python as if you were coding R**. By default, reticulate will translate the results of those operations into R objects, unless we state otherwise.
+
+```{r}
+np <- import("numpy", convert = TRUE)
+np1 <- np$array(c(1:4))
+np1
+```
+
+To avoid the autoamatic translation of variable into R objects, you will need to set your convert function into `FALSE`.
+
+```{r}
+rm(np, np1)
+
+np <- import("numpy", convert = FALSE)
+np1 <- np$array(c(1:4))
+np1
+```
+
+#### **Running a Python chunk in R**
+
+Most certainly you will face a situation were you need to run a code chunk written in Python within R. To adapt it to the method mentioned above is tedious so, isn't there another way to run a chunk of Python code in R?
+
+As you might have guessed, the answer is yes. To do so you can use `py_run_string` function. This function will run Python code and will save the results in the Python environment unless we assign them to a variable. You can access those results from R as we have explained previously on this tutorial. Let's see an example.
+
+```{r}
+py_run_string("import numpy as np")
+py_run_string("np2 = np.array(range(4))")
+```
+
+Despite this is a solution, if you need to run many lines it still tedious and inefficient. In these cases, you might find the function **`py_run_file` useful, as it enables you to run entire Python scripts in R**.
+
+### **Reticulate: unity makes strength**
+
+Both R and Python are super powerful languages. So if you want to have all available possibilities of both languages when approaching a problem, to be able to use both of them simultaneously it's a huge advantage. In this regard, reticulate offers a many options to combine both languages in a very practical and easy way. With reticulate you will be able to combine the best of both worlds and generate a greater impact in an easier way.
+
+Can you imagine what the potential of Python's Deep Learning and the interactivity of a Shiny App could do together? What about using super-specialized packages that exist in one language but not the other? Because, in the end, unity makes strength.
+
+### EXAMPLE
+
+```{r}
+# this code in R
+#conda_install(envname = "ML_workshop",packages = "seaborn")
+```
+
+```{python}
+# this code in python
+import seaborn as sns
+fmri = sns.load_dataset("fmri")
+```
+
+```{r}
+# this code in R
+f1 <- subset(py$fmri ,region == "parietal")
+```
+
+```{python}
+# this code in python
+import matplotlib as mpl 
+sns.lmplot("timepoint" , "signal" , data =r.f1)
+mpl.pyplot.show()
+```

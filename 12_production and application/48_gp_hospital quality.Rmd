@@ -1,0 +1,156 @@
+---
+title: "Untitled"
+author: "Bakro"
+date: "10/17/2021"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Hospital Quality
+
+## import data 
+
+```{r}
+  path <- paste(getwd(), "/data/hospital-data" , ".csv", sep = "")
+  hospital_data <- read.csv(path)
+  
+  path <- paste(getwd(), "/data/outcome-of-care-measures" , ".csv", sep = "")
+  outcome<- read.csv(path)
+```
+
+## select intereted data 
+
+```{r}
+
+outcome <- outcome[,c(2,7,11,17,23)]
+colnames(outcome) <- c("hospital","State","heart_attack","heart_failure","pneumonia")
+```
+
+explore data
+
+```{r}
+head(outcome)
+outcome[, 3] <- as.numeric(outcome[, 3])
+outcome[, 4] <- as.numeric(outcome[, 4])
+outcome[, 5] <- as.numeric(outcome[, 5])
+hist(outcome[, 3])
+
+outcome[,"State"] <- as.factor(outcome[,"State"])
+```
+
+***Finding the best hospital in a state***
+
+```{r}
+best <- function(state, case) {
+## Read outcome data
+## Check that state and outcome are valid
+## Return hospital name in that state with lowest 30-day death
+## rate
+  if (!state %in%  levels(outcome$State)) stop("invalid state")
+  if (!case  %in% c("heart_attack","heart_failure","pneumonia")) stop("invalid case")
+  best <- filter(outcome,State == state) %>% group_by(hospital) %>% summarise(Avg = mean(.data[[case]],na.rm = TRUE)) %>% arrange(Avg) 
+ 
+  return(best[1,])
+}
+```
+
+***test case***
+
+```{r}
+best("TX", "heart_attack") #"CYPRESS FAIRBANKS MEDICAL CENTER"
+best("TX", "heart_failure") #"FORT DUNCAN MEDICAL CENTER"
+best("MD", "heart_attack") # "JOHNS HOPKINS HOSPITAL, THE"
+best("MD", "pneumonia")   # "GREATER BALTIMORE MEDICAL CENTER"
+#best("BB", "heart_attack")  # invalid state
+#best("NY", "hert_attack")  # invalid case
+best("SC", "heart_attack")  # MUSC MEDICAL CENTER
+best("NY", "pneumonia")  # MAIMONIDES MEDICAL CENTER
+best("AK", "pneumonia")  # YUKON KUSKOKWIM DELTA REG HOSPITAL
+```
+
+```{r}
+rankhospital <- function(state, case, num = "best") {
+## Read outcome data
+## Check that state and outcome are valid
+## Return hospital name in that state with the given rank
+## 30-day death rate
+    if (!state %in%  levels(outcome$State)) stop("invalid state")
+  if (!case  %in% c("heart_attack","heart_failure","pneumonia")) stop("invalid case")
+  
+  best <- outcome %>% filter(State == state) %>% group_by(hospital) %>% summarise(Avg = mean(.data[[case]],na.rm = TRUE)) %>% drop_na() %>% arrange(Avg) 
+  if (num == "best") num <- 1
+  if (num == "worst") num <- nrow(best)
+  
+ return(best[num,])
+}
+
+```
+
+***test cases***
+
+```{r}
+rankhospital("TX", "heart_failure", 4) # "DETAR HOSPITAL NAVARRO"
+rankhospital("MD", "heart_attack", "worst") # "HARFORD MEMORIAL HOSPITAL"
+rankhospital("MN", "heart_attack", 5000)  # NA
+rankhospital("NC", "heart_attack", "worst")  # WAYNE MEMORIAL HOSPITAL
+rankhospital("WA", "heart_attack", 7)  # YAKIMA VALLEY MEMORIAL HOSPITAL
+rankhospital("TX", "pneumonia", 10)  # SETON SMITHVILLE REGIONAL HOSPITAL
+rankhospital("NY", "heart_attack", 7)  # BELLEVUE HOSPITAL CENTER
+```
+
+## rankallstate 
+
+```{r}
+rankall <- function(case, num = "best") {
+## Read outcome data
+## Check that state and outcome are valid
+## For each state, for each state, find the hospital of the given rank
+## Return a data frame with the hospital names and the
+## (abbreviated) state name
+    
+    if (!case  %in% c("heart_attack","heart_failure","pneumonia")) stop("invalid            case")
+  
+  statetbl <- data.frame(State =levels(outcome$State))
+
+
+    best <- outcome  %>% 
+    group_by(State,hospital) %>%
+    summarise(Avg = mean(.data[[case]],na.rm = TRUE)) %>%
+    drop_na() %>% ungroup(hospital) %>% 
+    mutate(rank = order(order(Avg))) %>% 
+    arrange(rank,State)
+        
+if(num == "best"){
+    best <- best %>%  slice(1)   %>% right_join(statetbl) %>% arrange(State)
+    }else if(num == "worst"){
+     best <- best %>%  slice(n()) %>% right_join(statetbl) %>% arrange(State)
+    }else{
+     best <- best %>%  slice(num) %>% right_join(statetbl) %>% arrange(State)
+}
+   
+   View(best)
+  return(best)
+}
+```
+
+```{r}
+
+head(rankall("heart_attack", 20), 10)
+tail(rankall("pneumonia", "worst"), 3)
+tail(rankall("heart_failure"), 10)
+r <- rankall("heart_attack", 4)
+as.character(subset(r, State == "HI")$hospital) # "CASTLE MEDICAL CENTER"
+r <- rankall("pneumonia", "worst")
+as.character(subset(r, State == "NJ")$hospital) # "BERGEN REGIONAL MEDICAL CENTER"
+
+r <- rankall("heart_failure", 10)
+as.character(subset(r, State == "NV")$hospital) #"RENOWN SOUTH MEADOWS MEDICAL CENTER"
+
+```

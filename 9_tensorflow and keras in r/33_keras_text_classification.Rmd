@@ -1,0 +1,156 @@
+---
+title: "33_keras_text_classification"
+author: "Bakro"
+date: "1/4/2022"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Text Classification
+
+```{r}
+library(keras)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(pins)
+```
+
+We will use the Movie Reviews dataset created by Bo Pang and Lillian Lee.
+This dataset is redistributed with NLTK with permission from the authors.
+
+```{r}
+df <- readr::read_csv("./data/movie_review.csv")
+  
+  
+```
+
+```{r}
+head(df)
+df %>% count(tag)
+```
+
+```{r}
+df$text[1]
+```
+
+Let's also split our dataset into training and testing:
+
+```{r}
+training_id <- sample.int(nrow(df), size = nrow(df)*0.8)
+training <- df[training_id,]
+testing <- df[-training_id,]
+```
+
+```{r}
+# It’s also useful to find out what is the distribution of the number of words in each review.
+
+df$text %>% 
+  strsplit(" ") %>% 
+  sapply(length) %>% 
+  summary()
+```
+
+The reviews --- the text --- must be converted to tensors before fed into the neural network.
+First, we create a dictionary and represent each of the 10,000 most common words by an integer.
+In this case, every review will be represented by a sequence of integers.
+
+Then we can represent reviews in a couple of ways:
+
+-   One-hot-encode the arrays to convert them into vectors of 0s and 1s.
+    For example, the sequence [3, 5] would become a 10,000-dimensional vector that is all zeros except for indices 3 and 5, which are ones.
+    Then, make this the first layer in our network --- a `dense` layer --- that can handle floating point vector data.
+    This approach is memory intensive, though, requiring a `num_words * num_reviews` size matrix.
+
+-   Alternatively, we can pad the arrays so they all have the same length, then create an integer tensor of shape `num_examples * max_length`.
+    We can use an embedding layer capable of handling this shape as the first layer in our network.
+
+In this tutorial, we will use the second approach.
+Now, let's define our Text Vectorization layer, it will be responsible to take the string input and convert it to a Tensor.
+
+```{r}
+num_words <- 10000
+max_length <- 50
+text_vectorization <- layer_text_vectorization(
+  max_tokens = num_words, 
+  output_sequence_length = max_length, 
+)
+```
+
+```{r}
+# Now, we need to adapt the Text Vectorization layer. It’s when we call adapt that the layer will learn about unique words in our dataset and assign an integer value for each one.
+
+text_vectorization %>% 
+  adapt(df$text)
+# We can now see the vocabulary is in our text vectorization layer.
+
+# TODO see https://github.com/tensorflow/tensorflow/pull/34529
+# get_vocabulary(text_vectorization)
+# You can see how the text vectorization layer transforms it’s inputs:
+
+text_vectorization(matrix(df$text[1], ncol = 1))
+```
+
+### Build the model
+
+```{r}
+input <- layer_input(shape = c(1), dtype = "string")
+
+output <- input %>% 
+  text_vectorization() %>% 
+  layer_embedding(input_dim = num_words + 1, output_dim = 16) %>%
+  layer_global_average_pooling_1d() %>%
+  layer_dense(units = 16, activation = "relu") %>%
+  layer_dropout(0.5) %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+
+model <- keras_model(input, output)
+
+# The layers are stacked sequentially to build the classifier:
+# 
+# The first layer is an embedding layer. This layer takes the integer-encoded vocabulary and looks up the embedding vector for each word-index. These vectors are learned as the model trains. The vectors add a dimension to the output array. The resulting dimensions are: (batch, sequence, embedding).
+# Next, a global_average_pooling_1d layer returns a fixed-length output vector for each example by averaging over the sequence dimension. This allows the model to handle input of variable length, in the simplest way possible.
+# This fixed-length output vector is piped through a fully-connected (dense) layer with 16 hidden units.
+# The last layer is densely connected with a single output node. Using the sigmoid activation function, this value is a float between 0 and 1, representing a probability, or confidence level.
+```
+
+```{r}
+model %>% compile(
+  optimizer = 'adam',
+  loss = 'binary_crossentropy',
+  metrics = list('accuracy')
+)
+```
+
+### Train the model
+
+```{r}
+history <- model %>% fit(
+  training$text,
+  as.numeric(training$tag == "pos"),
+  epochs = 10,
+  batch_size = 512,
+  validation_split = 0.2,
+  verbose=2
+)
+```
+
+### Evaluate the model
+
+```{r}
+results <- model %>% evaluate(testing$text, as.numeric(testing$tag == "pos"), verbose = 0)
+results
+# This fairly naive approach achieves an accuracy of about 68%. With more advanced approaches, the model should get closer to 85%.
+plot(history)
+```

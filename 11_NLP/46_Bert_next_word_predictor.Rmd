@@ -1,0 +1,27 @@
+---
+title: "46_Bert_next_word_predictor"
+author: "Bakro"
+date: "1/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(reticulate)
+```
+
+```{r}
+py_run_file("46_next_word_predictor.py")
+```
+
+```{r}
+ t = py$str_return("how many people")
+       words = strsplit(t , split = " ")
+       words = as.data.frame(words)
+       colnames(words)[1] = "words"
+       head(words,5)
+```
+

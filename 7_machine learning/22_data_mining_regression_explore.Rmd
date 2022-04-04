@@ -1,0 +1,307 @@
+---
+title: "22_Data_mining"
+author: "Bakro"
+date: "1/2/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## data exploration and visualization
+
+### library
+
+```{r}
+library(tidyverse)
+```
+
+### free memory
+
+```{r}
+rm(list = ls())
+gc()
+dashes <- function()
+    {
+    cat("-------------------------------------------------","\n")
+}
+dashes()
+```
+
+### structure
+
+```{r}
+cat(" number of rows " , nrow(iris),"\n")
+cat(" number of cols " , ncol(iris),"\n")
+cat(" Dims " , dim(iris),"\n")
+cat(" names of cols " , names(iris),"\n")
+dashes()
+cat(" structure " ,"\n")
+str(iris)
+dashes()
+cat(" attributes : " , "\n")
+attributes(iris)
+dashes()
+
+```
+
+### data
+
+```{r}
+# data
+iris[1:5,]
+dashes()
+head(iris)
+dashes()
+tail(iris)
+dashes()
+cat("The first 10 values of Sepal.Length \n ")
+iris[1:10, "Sepal.Length"] 
+iris$Sepal.Length[1:10]
+```
+
+### summmary
+
+```{r}
+print("summary of data :")
+summary(iris)
+dashes()
+library(skimr)
+skim(iris)
+dashes()
+print(" distripution of data  :")
+# distripution of data 
+range(iris$Sepal.Length)
+## [1] 4.3 7.9
+quantile(iris$Sepal.Length)
+## 0% 25% 50% 75% 100%
+## 4.3 5.1 5.8 6.4 7.9
+quantile(iris$Sepal.Length, c(0.1, 0.3, 0.65))
+## 10% 30% 65%
+## 4.80 5.27 6.20
+```
+
+### Variance and Histogram
+
+```{r}
+print (" variance is the expectation of the squared deviation of a random variable from its 
+population mean or sample mean.")
+var(iris$Sepal.Length)
+hist(iris$Sepal.Length)
+
+# Density
+plot(density(iris$Sepal.Length))
+
+print("Pie Chart")
+iris2 <- iris %>% sample_n(50)
+iris2$Species %>% table() %>% pie()
+print("table")
+table(iris$Species)
+print("prop table in procent")
+table(iris$Species)%>% prop.table()%>% round(3) * 100
+#another way
+# pie(table(iris$Species))
+# add percentages
+tab <- iris2$Species %>% table()
+precentages <- tab %>% prop.table() %>% round(3) * 100
+txt <- paste0(names(tab), '\n', precentages, '%')
+pie(tab, labels=txt)
+#add Codeadd Markdown
+print( "bar chart ")
+# Bar Chart
+barplot(table(iris$Species))
+
+iris2$Species %>% table() %>% barplot()
+# add colors and percentages
+bb <- iris2$Species %>% table() %>%
+barplot(axisnames=F, main='Species', ylab='Frequency',
+col=c('pink', 'lightblue', 'lightgreen'))
+
+text(bb, tab/2, labels=txt, cex=1.5)
+```
+
+### Covariance and correlation
+
+```{r}
+print("Covariance and correlation")
+iris$Species <-as.numeric(iris$Species)
+mode(t)
+cov(iris$Sepal.Length, iris$Petal.Length)
+cov(iris[,1:5])
+dashes()
+cor(iris$Sepal.Length, iris$Petal.Length)
+cor(iris[,1:5])
+dashes()
+```
+
+### Aggreation
+
+```{r}
+print ("Aggreation")
+print("monitoring sepal length for different species grouping by species  ")
+aggregate(Sepal.Length ~ Species, summary, data = iris)
+dashes()
+print ("Boxplot")
+boxplot(Sepal.Length~Species, data=iris)
+#add Code add Markdown
+print("Scatter Plot")
+with(iris, plot(Sepal.Length, Sepal.Width, col=Species, pch=as.numeric(Species)))
+dashes()
+print("Scatter Plot with Jitter")
+plot(jitter(iris$Sepal.Length), jitter(iris$Sepal.Width))
+dashes()
+
+print(" A Matrix of Scatter Plots")
+pairs(iris)
+print(" ggplot2")
+qplot(Sepal.Length, Sepal.Width, data = iris, facets = Species ~ .)
+
+colnames(iris)
+ggplot(data = iris ) + geom_jitter(aes(x = Sepal.Length , y = Sepal.Width ))+
+facet_wrap(~Species)
+```
+
+## Regression
+
+### linear regression
+
+```{r}
+## CPI data
+year <- rep(2008:2010, each = 4)
+quarter <- rep(1:4, 3)
+cpi <- c(162.2, 164.6, 166.5, 166.0,
+166.2, 167.0, 168.6, 169.5,
+171.0, 172.1, 173.3, 174.0)
+plot(cpi, xaxt="n", ylab="CPI", xlab="")
+# draw x-axis, where "las=3" makes text vertical
+axis(1, labels=paste(year,quarter,sep="Q"), at=1:12, las=3)
+## correlation between CPI and year / quarter
+cor(year, cpi)
+cor(quarter, cpi)
+## build a linear regression model with function lm()
+fit <- lm(cpi ~ year + quarter)
+fit
+
+cat("With the above linear model, CPI is calculated as
+cpi = c0 + c1 ∗ year + c2 ∗ quarter/n
+where c0, c1 and c2 are coefficients from model fit.\n
+What will the CPI be in 2011?\n")
+
+# make prediction
+cpi2011 <- fit$coefficients[[1]] +
+fit$coefficients[[2]] * 2011 +
+fit$coefficients[[3]] * (1:4)
+
+cpi2011
+
+print("attributes of the model") 
+attributes(fit)
+
+print("differences between observed values and fitted values")
+residuals(fit)
+
+summary(fit)
+
+
+print("Prediction of CPIs in 2011")
+data2011 <- data.frame(year=2011, quarter=1:4)
+cpi2011 <- predict(fit, newdata=data2011)
+style <- c(rep(1,12), rep(2,4))
+plot(c(cpi, cpi2011), xaxt="n", ylab="CPI", xlab="",
+pch=style, col=style)
+txt <- c(paste(year,quarter,sep="Q"),
+"2011Q1", "2011Q2", "2011Q3", "2011Q4")
+axis(1, at=1:16, las=3, labels=txt)
+```
+
+## poly linear regression 
+
+```{r}
+get_sim_data = function(f, sample_size = 100) {
+  x = runif(n = sample_size, min = 0, max = 1)
+  eps = rnorm(n = sample_size, mean = 0, sd = 0.75)
+  y = f(x) + eps
+  data.frame(x, y)
+}
+
+set.seed(1)
+sim_data = get_sim_data(f)
+
+fit_0 = lm(y ~ 1,                   data = sim_data)
+fit_1 = lm(y ~ poly(x, degree = 1), data = sim_data)
+fit_2 = lm(y ~ poly(x, degree = 2), data = sim_data)
+fit_9 = lm(y ~ poly(x, degree = 9), data = sim_data)
+```
+
+### GLM (logistic regression)
+
+```{r eval=FALSE}
+log.model <- glm(Type.new ~ FirstLat, data = hurricanes, family = 'binomial')
+ summary(log.model)
+```
+
+```{r}
+print("Build a Generalized Linear Model")
+## build a regression model
+data("bodyfat", package="TH.data")
+myFormula <- DEXfat ~ age + waistcirc + hipcirc + elbowbreadth +
+kneebreadth
+
+bodyfat.glm <- glm(myFormula, family=gaussian("log"), data=bodyfat)
+summary(bodyfat.glm)
+
+## make prediction and visualise result
+pred <- predict(bodyfat.glm, type = "response")
+plot(bodyfat$DEXfat, pred, xlab = "Observed", ylab = "Prediction")
+abline(a = 0, b = 1)
+
+#?glm
+```
+
+```{r}
+## Dobson (1990) Page 93: Randomized Controlled Trial :
+counts <- c(18,17,15,20,10,20,25,13,12)
+outcome <- gl(3,1,9)
+treatment <- gl(3,3)
+data.frame(treatment, outcome, counts) # showing data
+glm.D93 <- glm(counts ~ outcome + treatment, family = poisson())
+anova(glm.D93)
+summary(glm.D93)
+## Computing AIC [in many ways]:
+(A0 <- AIC(glm.D93))
+(ll <- logLik(glm.D93))
+A1 <- -2*c(ll) + 2*attr(ll, "df")
+A2 <- glm.D93$family$aic(counts, mu=fitted(glm.D93), wt=1) +
+        2 * length(coef(glm.D93))
+stopifnot(exprs = {
+  all.equal(A0, A1)
+  all.equal(A1, A2)
+  all.equal(A1, glm.D93$aic)
+})
+```
+
+```{r}
+## an example with offsets from Venables & Ripley (2002, p.189)
+utils::data(anorexia, package = "MASS")
+
+anorex.1 <- glm(Postwt ~ Prewt + Treat + offset(Prewt),
+                family = gaussian, data = anorexia)
+summary(anorex.1)
+
+
+# A Gamma example, from McCullagh & Nelder (1989, pp. 300-2)
+clotting <- data.frame(
+    u = c(5,10,15,20,30,40,60,80,100),
+    lot1 = c(118,58,42,35,27,25,21,19,18),
+    lot2 = c(69,35,26,21,18,16,13,12,12))
+summary(glm(lot1 ~ log(u), data = clotting, family = Gamma))
+summary(glm(lot2 ~ log(u), data = clotting, family = Gamma))
+## Aliased ("S"ingular) -> 1 NA coefficient
+(fS <- glm(lot2 ~ log(u) + log(u^2), data = clotting, family = Gamma))
+tools::assertError(update(fS, singular.ok=FALSE), verbose=interactive())
+## -> .. "singular fit encountered"
+
+
+
+```

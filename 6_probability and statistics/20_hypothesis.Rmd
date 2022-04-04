@@ -1,0 +1,656 @@
+---
+title: "hypothesis_testing"
+author: "Bakro"
+date: "11/29/2021"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+## Definination
+
+### hypothesis
+
+A hypothesis is a statement conjecturing some possible values of an
+unknown population parameter. We can say a statistical hypothesis is an
+assertion or statement about the probability or a population parameter
+in the statistical sense. The usual way of stating a statistical
+hypothesis is to give the value(s) of the underlying parameter(s) of the
+distribution. A statistical hypothesis is formulated to be tested for
+rejection or non--rejection. The entire enterprise of hypothesis testing
+is well organized, mainly through the works of the trio -- Fisher,
+Neyman and Pearson A hypothesis statement is usually specified by 𝐻,
+followed by the punctuation mark colon (:) and followed by the statement
+of the conjectured value. For example, if we want to conjecture that the
+value of an unknown population mean 𝜇 is 50, we write: 𝑯: 𝝁 = 50
+
+### Null Hypothesis
+
+A null hypothesis (usually denoted by 𝐻0 is the hypothesis of primary
+interest or main hypothesis). This statement is tentatively held to be
+true. For example, the hypothesis that an unknown population mean is not
+different from 50 will be written as 𝐻0: 𝜇 = 50, while the hypothesis
+that 𝐻0: 𝜇1 = 𝜇2 𝑜𝑟 𝜇1 − 𝜇2 = 0.
+
+### Alternative Hypothesis
+
+The alternative hypothesis (denoted by 𝐻1 𝑜𝑟 𝐻𝐴) is a complementary
+hypothesis to the null hypothesis which is included to reflect the
+direction of another choice of a new null hypothesis should the current
+null hypothesis be rejected. It is usually put in one of the following
+three possible forms: (a) 𝐻1: 𝜇 \> 50 (b) 𝐻1: 𝜇 \< 50 (c) 𝐻1: 𝜇 ≠ 50
+
+### The Sidedness of a Test
+
+The sidedness of a test is the direction specified by the alternative
+hypothesis 𝐻1 indicating the direction of a different choice of a new 𝐻0
+should the current one be rejected. When a hypothesis is specified, the
+next stage is to test its validity or otherwise. The testing usually
+involves data collected from a representative sample. The data is used
+to calculate a sample value called the test statistic whose magnitude
+leads to an acceptance or a rejection (critical region) of the null
+hypothesis.
+
+### Test Statistic (TS)
+
+A Test Statistic (TS) in a test of hypothesis is a function of sample
+data whose magnitude determines the acceptance or rejection of the null
+hypothesis under test. This is because the test statistic (TS) is a
+function of sample data; it means its value will vary from sample to
+sample. This means that any test statistic has its sampling
+distribution.
+
+### Critical or Rejection Region (RR)
+
+The critical region (or Rejection Region) of a test is a set (RR) on the
+real number line specified in such a way that whenever the numerical
+value of the test statistic falls into this set (RR), the null
+hypothesis 𝐻0 is rejected and accepted if the numerical value of TS
+falls outside the rejection region RR.
+
+### Acceptance Region
+
+This is the region in the sample space, which leads to acceptance of 𝐻0.
+Of course, the union of the critical and acceptance regions gives the
+sample space.
+
+### Errors in Hypothesis Testing
+
+There are two types of errors, namely Type I and Type II errors, which
+can be committed in a statistical hypothesis testing exercise. • Type 1
+Error: This is the act of rejecting a true hypothesis. The probability
+of Type I error is the size of the critical region which is called the
+"Level of Significance" of a test and is usually denoted by 𝛼 • Type II
+Error: This error is committed when a false hypothesis is accepted. It
+would be nice if we can simultaneously minimize both errors, but this is
+not possible. What is usually done to get the best test possible is to
+fix Type I error at some level like 𝛼 = 5%, 1% etc., and minimize Type
+II error.
+
+### p -- value
+
+In statistics, the p-value is the probability of getting test results
+that is at least as the results actually observed, assuming that the
+null hypothesis is true. A very small p-value means that such an extreme
+observed value or outcome is very unlikely under the null hypothesis.
+
+### The Significance Level of a Test
+
+The significance level of a test is the maximum probability of
+committing Type I error when the null hypothesis holds. The level of
+significance is often specified before a test is conducted. The maximum
+probability denoted by 𝛼 and prefixed at a level of not more than 5% (𝑜𝑟
+0.05). A level of significance of 5% means that there are five chances
+out of 100 that we shall reject 𝐻0, whereas it should have been
+accepted. When a researcher has finally settled on the size of Type I
+error of the test (that is, the level of significance of the test), we
+then specify the boundary of the rejection region (RR).
+
+### Specifying the Rejection Region (RR)
+
+To completely specify the boundary of the rejection region, and the set
+defining RR, the knowledge of the previously defined concepts is used: ✓
+The form and the distribution of the test statistic ✓ The sidedness of
+the test ✓ The value of the significance level 𝛼 of the test which will
+always be prefixed or given from the onset of the test
+
+### Essential Steps in Hypothesis Testing
+
+The following are the necessary steps in any hypothesis testing
+situation:
+
+1\. Specify 𝐻0 and 𝐻1
+
+2\. Specify the significance level 𝛼 of the test
+
+3\. Decide on the type of test (𝑍 𝑜𝑟 𝑡) and then write down the test
+statistic TS and calculate its value assuming 𝐻0 is true
+
+4\. Decide on the distribution of the chosen test statistic and the
+sidedness of the test.
+
+5\. Using the significance level 𝛼 of the test, the sidedness of the
+test and the distribution of the test statistic decide the boundary or
+boundaries of the rejection region as well as the rejection region
+itself.
+
+6. The decision rule is then given as: Rule One: We have evidence
+against the null hypothesis, meaning we do not accept the null
+hypothesis when: ➢ p-value \< level of significance or, ➢ test statistic
+(calculated value) \> tabulated value, or ➢ the calculated value of TS
+under 𝐻0 falls in RR, then do not accept 𝐻0 Rule Two: We have a weak
+evidence against the null hypothesis, meaning we fail to reject the null
+hypothesis (that is, we accept 𝐻0), when: ➢ p-value \> level of
+significance or, ➢ test statistic (calculated value) \< tabulated value,
+or ➢ the calculated value of TS under 𝐻0 falls outside in RR, then
+accept 𝐻0 Note: a) Whenever 𝐻0 is rejected, 𝐻1 is accepted. b) All these
+steps are common to all test procedures, just that the Test Statistic TS
+keeps changing.
+
+### basics
+
+```{r}
+table(diamonds$color)
+tbl_color_cut <-table(diamonds$color,diamonds$cut)
+summary(tbl_color_cut)#test independene
+quantile(diamonds$price,c(.05 , .95))
+t <-scale(diamonds$price) # normalize data
+head(t)
+
+```
+
+### test of proportions
+
+```{r}
+## 2.1: Consider a survey asking 100 randomly selected people if they had 
+## breakfast on Saturday morning. 
+## Suppose 42 people say yes. Does this support the 
+## hypothesis that the true proportion is 50%? 
+
+prop.test(x =42 , n =100 , alternative = "two.sided" , conf.level = .95 , correct = TRUE)
+# data:  42 out of 100, null probability 0.5
+# X-squared = 2.25, df = 1, p-value = 0.1336
+# alternative hypothesis: true p is not equal to 0.5
+# 95 percent confidence interval:
+#  0.3233236 0.5228954
+# sample estimates:
+#    p 
+# 0.42 
+## change values you can using manipulate function to discover more
+prop.test(x =50 , n =100 , alternative = "two.sided" , conf.level = .95 , correct = TRUE)
+```
+
+```{r}
+## 2.2: What if we ask 1000 people and 420 say yes. 
+## Does this still support the 
+## null hypothesis that p = 0.5? 
+prop.test(x =470 , n =1000 , alternative = "two.sided" , conf.level = .95 , correct = TRUE)
+
+```
+
+```{r}
+## 3.1: Suppose a flash light manufacturer claims a customer gets 
+## 25 hours of light on average on a full charge. 
+## A consumer group asks 10 owners of this flashlight to calculate 
+## their hours of usage on a full charge and the mean value was 22 
+## with a standard deviation of 1.5.
+## Is the manufacturer's claim supported? 
+
+## In this case H0: mu = 25 against the one-sided 
+## alternative hypothesis that mu < 25. 
+## To test using R we simply need to tell R about the type of test. 
+## (As well, we need to convince ourselves that the t-test is appropriate 
+## for the underlying parent population.) 
+
+## For this example, the built-in R function 
+## t.test isn't going to work as the data is already summarized 
+## so we are on our own. We need to calculate the test statistic and then 
+## find the p-value. 
+xbar =22
+s =1.5
+n = 10
+## Compute the t statistic. Note we assume mu = 25 under H0 
+t<- (xbar-25)/(s/sqrt(n))
+
+## Calculate the t statistic
+pt(t,df=n-1)
+
+## Now use pt to get the distribution function of t 
+## To get the p-value
+# 6.846828e-05 reject the null hypothesis
+```
+
+```{r}
+## 3.2: The following is the results of the measurements on each of 
+## 6 randomly selected members of a population whose distribution is 
+## normal with unknown mean and unknown variance: 11,19,16,21,24,27
+## Test the hypothesis mu = 14.0 against the alternative mu > 14.0 
+## at 5% level of significance.
+
+result <- c(11,19,16,21,24,27)
+t.test(result , mu = 14 ,alternative = "greater")
+```
+
+```{r}
+###########################################################
+## Task Four: Two sample test for proportions
+## In this task, we will learn how perform hypothesis test
+## for proportions for two samples 
+###########################################################
+
+## 4.1: A survey is taken two times over the course of two weeks. 
+## The pollsters wish to see if there is a difference in the results 
+## as there has been a new advertising campaign run. 
+## Here is the data:
+
+Week1 <- c(45,35)
+Week2 <- c(56,47) 
+advert <- data.frame(Week1, Week2)
+rownames(advert) <- c("Favorable", "Unfavorable")  
+advert
+
+## The standard hypothesis test is H0 : P1 = P2 against the alternative
+## (two-sided) HA: P1 neq P2.
+## The function prop.test is used to being called 
+## as prop.test(x,n) where x is the number favorable and n is the total. 
+## Here it is no different, but since there are two xs it looks slightly 
+## different as follows:
+prop.test(c(45,56) ,c(sum(Week1) , sum(Week2)))
+```
+
+```{r}
+###########################################################
+## Task Five: Two sample test for means
+## In this task, we will learn how to perform hypothesis test
+## for means for two samples with equal and unequal variances
+###########################################################
+
+## 5.1: Suppose the recovery time for patients taking a new drug is 
+## measured (in days). A placebo group is also used 
+## to avoid the placebo effect. The data is as follows:
+
+withdrug <- c(15,12,13,7,9,8)
+placebo <- c(15,11,8,12,10,7)
+
+## Plot a boxplot for the two variables
+boxplot(withdrug , placebo)
+
+## The boxplot supports the assumptions of equal variances and normality.
+
+## Calculate the variances
+var(withdrug)
+var(placebo)
+## We now test the null hypothesis of equal means against the one-sided 
+## alternative that the drug group has a smaller mean. 
+t.test(withdrug,placebo,alternative = "less" ,var.equal = TRUE)
+
+## 5.2: Two-sampled t-test with unequal variances
+## Let's use the same example as above, but assuming unequal variances
+t.test(withdrug,placebo,alternative = "less" )
+
+```
+
+```{r}
+###########################################################
+## Task Six: Matched Samples
+## In this task, we will learn how to test hypothesis for matched samples
+###########################################################
+
+## 6.1: In order to promote fairness in grading an entrance examination, each  
+## candidate was graded twice by different graders. Based on the grades, 
+## can we see if there is a difference between the two graders? 
+
+grader1 <- c(3, 0, 5, 2, 5, 5, 5, 4, 4, 5) 
+grader2 <- c(2, 1, 4, 1, 4, 3, 3, 2, 3, 5) 
+
+## Clearly there are differences. Are they described by random fluctuations 
+## (mean mu is 0), or is there a bias of one grader over another? 
+## (mean mu neq 0)
+
+## We should check the assumption of normality with normal plots
+par(mfrow = c(1,2))
+qqnorm(grader1)
+qqline(grader1,col =2)
+qqnorm(grader2)
+qqline(grader2,col =2)
+## A matched sample test will give us some insight. 
+## We apply the t-test as follows: 
+t.test(grader1 , grader2 , paired = TRUE ,alternative = "two.sided")
+```
+
+notes 1- When p-value \> level of significance or when test statistic
+(calculated value) \< tabulated value, we have weak evidence against the
+null hypothesis, so we fail to reject the null hypothesis
+
+2-What is the null hypothesis for a one-sample test of proportion? 0.5
+
+3- The p-value depends not just on the ratio, but also n
+
+### goodness of fit test
+
+```{r}
+## 2.1: The letter distribution of the 5 most popular letters in the 
+## English language is known to be approximately:
+## Letter: E,T,N,R,O Frequency: 29, 21, 17, 17, 16.
+## That is when either E,T,N,R,O appear, on average 29 times out of 100 
+## it is an E and not the other 4. 
+letterprop <- c(29, 21, 17, 17, 16)/100
+
+
+## This information is useful in cryptography 
+## to break some basic secret codes. 
+## Suppose a text is analyzed and the number 
+## of E,T,N,R and Os are counted. The following distribution is found 
+## Letter: E,T,N,R,O Frequency:100,110,80,55,14
+letterfreq <- c(100,110,80,55,14)
+
+chisq.test(letterfreq , p = letterprop)
+```
+
+### independence for categorical variables
+
+```{r}
+###########################################################
+## Task Three: Chisquare tests: Test for independence
+## In this task, we will learn how to use the chi-square test
+## to test for independence for categorical variables
+###########################################################
+
+## 3.1: Suppose you find the following data on the severity of a crash 
+## tabulated for the cases where the passenger had a seat belt, or did not. 
+## We want to know if wearing a seat belt makes a difference? i.e. are 
+## the two rows independent? The data is as follows:
+
+yesbelt <- c(12813,647,359,42)
+nobelt <-c(65963,4000,2642,303)
+
+## Combine the two vectors row-wise using rbind
+seatbelt<-rbind(yesbelt,nobelt)
+
+## Add columns to the dataset
+colnames(seatbelt) <- c("none","minimal","minor","major")
+
+## Print the seatbelt data
+seatbelt
+
+## 3.2: Use chi-square to test for independence
+
+chisq.test(seatbelt)
+
+```
+
+### homogeneity
+
+```{r}
+###########################################################
+## Task Four: Chisquare tests: Test for homogeneity
+## In this task, we will learn how to use the chi-square test
+## to test for homogeneity
+###########################################################
+
+## 4.1: Let's roll a fair one, and a biased one and see 
+## if the chi-square test can decide the difference.
+## We roll the dice using the sample command
+## First to roll the fair die 200 times and the biased one 100 times 
+## and then tabulate as follows:
+set.seed(1002)
+die_fair <- sample(1:6 ,
+                   size =200,
+                   replace = TRUE ,
+                   p= c(1,1,1,1,1,1)/6)
+
+
+die_bias <- sample(1:6 ,
+                   size =100,
+                   replace = TRUE ,
+                   p= c(0.5,0.5,1,1,1,2)/6)
+## 4.2: Print the resulting frequency table
+res_fair <- table(die_fair)
+res_bias <- table(die_bias)
+## 4.3: Combine the two tables using rbind()
+res <-rbind(res_fair ,res_bias)
+
+## 4.4: Do these appear to be from the same distribution? 
+## We see that the biased coin has more sixes and 
+## far fewer twos than we should expect. 
+## So it clearly doesn't look so.
+chisq.test(res)
+```
+
+```{r}
+
+###########################################################
+## Task Five: Correlation
+## In this task, we will learn how to calculate different 
+## correlation coefficients
+###########################################################
+library(MASS)
+## Quick hint
+## 5.1: Use data() to see all in-built R datasets
+data()
+
+## 5.2: Load the "mammals" data to R workspace
+data("mammals")
+
+## 5.3: Let us explore the mammals dataset
+head(mammals, 5)
+tail(mammals)
+summary(mammals)
+names(mammals)
+
+## 5.4: Calculate correlation using the mammals dataset
+
+## Attach the mammals dataset
+attach(mammals)
+
+## Pearson moment correlation coefficient
+cor(mammals, method = "pearson")
+
+## Kendall correlation coefficient
+cor(mammals, method = "kendall")
+
+## Spearman's rank correlation coefficient
+cor(mammals, method = "spearman")
+
+```
+
+```{r}
+###########################################################
+## Task Six: Regression
+## In this task, we will learn how to perform regression 
+## analysis and interpret the results.
+###########################################################
+
+## 6.1: Simple linear regression
+
+## Given the data below:
+dist = c(253, 337,395,451,495,534,574)
+speed = c(100,200,300,450,600,800,1000)
+weight = c(100,230,75,120,105,300,450)
+
+## 6.2: Create the model using the lm function
+limodel <- lm(dist~speed)
+
+## 6.3: View the output and results from the model
+summary(limodel)
+#outlierTest(limodel)
+## 6.4: Create the model using the lm function
+limodel2 <- lm(dist~speed + weight)
+summary(limodel2)
+```
+
+### ANOVA
+
+```{r}
+###########################################################
+## Task Seven: Analysis of Variance () - Part I
+## In this task, we will learn how to perform one-way analysis
+## of variance
+###########################################################
+
+## The method called analysis of variance (ANOVA) allows 
+## one to compare means for more than 2 independent samples.
+
+## 7.1: Suppose the following are 24 tests and 3 graders for a test
+## Furthermore, suppose the grading scale is on the range 
+## 1-5 with 5 being the best.
+
+x = c(4,3,4,5,2,3,4,5)
+y = c(4,4,5,5,4,5,4,4)
+z = c(3,4,2,4,5,5,4,4)
+
+## 7.2: Create a dataframe called "scores"
+scores <- data.frame(x,y,z)
+
+## 7.3: Check the distribution of the graders
+boxplot(scores)
+
+## 7.4: Stack the dataframe
+scores <- stack(scores)     
+
+## Print out scores to have a better idea
+head(scores)
+
+## 7.5: Let us unstack and see the difference
+# scores <- unstack(scores)
+names(scores)
+
+## 7.6: Perform one way analysis of variance using oneway.test function
+
+## Assume equal variance
+oneway.test(values~ind,data = scores,var.equal = TRUE)
+### this mean that the three vectors have same distribution 
+
+## Assume unequal variance
+oneway.test(values~ind,data = scores,var.equal = F)
+
+## 7.7: Perform one way analysis of variance using anova function
+df <- stack(data.frame(x,y,z))
+
+anova(lm(values~ind , data =df))
+```
+
+```{r}
+###########################################################
+## Task Eight: Analysis of Variance (ANOVA) - Part II
+## In this task, we will learn how to perform one way ANOVA
+## using the InsectSprays dataset
+###########################################################
+
+## 8.1: Load the InsectSprays data
+data(InsectSprays)
+names(InsectSprays)
+
+## Unstack the data to have a better view
+unstack(InsectSprays)
+
+## 8.2: Create a boxplot
+boxplot(count ~ spray, data = InsectSprays,
+        xlab = "Type of spray", ylab = "Insect count",
+        main = "InsectSprays data", varwidth = TRUE, col = "lightgray")
+
+## 8.3: Create the ANOVA models
+
+## Using the "anova" function
+fm1 <- anova(lm(count ~ spray, data = InsectSprays))
+fm1
+## we reject the null h0 that say there is no difference between sprayes
+
+## Using the "aov" function
+fm2 <- aov(count ~ spray, data = InsectSprays)
+
+## Print the result of the model
+
+summary(fm2)
+
+## Create plots for the anova model
+graphs <- par(mfrow = c(2,2) ,oma = c(0,0,1.1,0))
+plot(fm2)
+
+## Using the "aov" function for square root of count
+fmsqrt <- aov( sqrt(count) ~ spray, data = InsectSprays)
+summary(fmsqrt)
+plot(fmsqrt)
+
+
+
+```
+
+```{r}
+###########################################################
+## Task Nine: The Kruskal-Wallis test
+## In this task, we will learn how to perform the Kruskal-Wallis test
+###########################################################
+
+## 9.1: The Kruskal-Wallis test is a nonparametric test that can be 
+## used in place of the one-way analysis of variance test if 
+## the data is not normal
+
+
+x = c(4,3,4,5,2,3,4,5)
+y = c(4,4,5,5,4,5,4,4)
+z = c(3,4,2,4,5,5,4,4)
+
+
+scores <- data.frame(x,y,z)
+
+
+
+
+## 7.4: Stack the dataframe
+scores <- stack(scores) 
+
+kruskal.test(values~ind , data = scores )
+
+## they are same accept the null hypothesis
+
+```
+
+notes :
+
+1- Chi-Square goodness of fit test is a non-parametric test that is used
+to find out how the observed value of a given phenomenon is
+significantly different from the expected value.
+
+2- The Chi-Square Test of Independence determines whether there is an
+association between categorical variables (i.e., whether the variables
+are independent or related). It is a nonparametric test. This test is
+also known as: Chi-Square Test of Association.
+
+3- **One-way ANOVA** is used for comparing two or more independent
+samples of equal or different sample sizes. It extends the Mann--Whitney
+U **test**, which is used for comparing only two groups.
+The **one**-**way** analysis of variance (**ANOVA**) is a parametric
+test
+
+4- When p-value \< level of significance, do not accept the null
+hypothesis
+
+5- If the test statistic (calculated value) \> tabulated value, do not
+accept Ho.\
+6- A very small p-value means that **such an extreme observed outcome
+would be very unlikely** under the null hypothesis.
+
+7- Which of these two Chi-square tests utilizes a contingency table to
+analyze the data?
+
+Test for independence and test for homogeneity
+
+8- The *Kruskal*-*Wallis* H *test* (sometimes also called the "one-way
+ANOVA on ranks") is a rank-based **nonparametric *test*** that can be
+used to determine if there are statistically significant differences
+between two or more groups of an independent variable on a continuous or
+ordinal dependent variable.
+
+\

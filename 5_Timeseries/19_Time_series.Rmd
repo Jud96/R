@@ -1,0 +1,758 @@
+---
+title: "Time_series"
+author: "Bakro"
+date: "12/27/2021"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Outline
+
+This project has several sections and will provide you a concise introduction to time series concepts in R. We will learn the essential theory and also practice fitting the four main types of time series models, getting you up and running with all the basics in a little more than an hour!
+
+(1) Introduction to Rhyme Environment
+
+(2) Time Series Data Overview (Theory)
+
+(3) Why Time Series? (Theory)
+
+(4) Key Concepts: Autocorrelation / Autocovariance (Theory)
+
+(5) Key Concepts: Stationarity (Theory)
+
+(6) Checking for Stationarity (Practice)
+
+(7) Transforming for Stationarity: Differencing (Practice)
+
+(8) Transforming for Stationarity: Detrending (Practice)
+
+(9) Basic Model Types: AR(p), MA(q), ARMA(p,q), ARIMA(p,d,q), Decomposition (Theory)
+
+(10) Fitting AR / MA / ARMA / ARIMA models with the Box Jenkins Method (Theory)
+
+(11) Box Jenkins Method: Checking for Stationarity (Practice)
+
+(12) Box Jenkins Method: Transforming for Stationarity & Identifying Model Parameters (Practice)
+
+(13) Box Jenkins Method: Checking the Residuals of the Model Fit (Practice)
+
+(14) Making a Forecast for Each Model (Practice)
+
+(15) Fitting STL (Seasonal Trend Loess) Decomposition Models (Practice)
+
+(16) Where to go Next
+
+
+
+```{r message=FALSE ,warning=FALSE}
+#load required r packages
+library(IRdisplay)
+library(magrittr)
+library(tidyverse)
+library(scales)
+library(gridExtra)
+library(forecast)
+library(tseries)
+library(ggthemes)
+theme_set(theme_economist())
+
+
+```
+
+```{r}
+# function to compare linear regression to basic time series model
+compare.models<-function(seed=30,n=100,train.fraction=0.8,random.mean=0,random.sd=0.1,B=1) {
+  # simulate a sample time series model
+  dat<-data.frame("t"=1:n,"X"=NA,"X.lag"=NA,"e"=rnorm(n=n,mean=random.mean,sd=random.sd))
+  dat$X.lag<-lag(dat$e,1); dat$X<-B*coalesce(dat$X.lag,0)+dat$e; dat$X[dat$t>train.fraction*n]<-NA
+  
+  # fit regular linear regression and a simple AR(1) time series model
+  pred.lm<-predict(lm(X~X.lag,data=dat[dat$t<=train.fraction*n,]),newdata=dat[dat$t>train.fraction*n,],interval="prediction",level=0.95)
+  pred.ts<-predict(arima(dat$X[dat$t<=train.fraction*n],order=c(0,1,0)),n.ahead=n-train.fraction*n,se.fit=T)
+  
+  # store future forecasts for plotting
+  dat$X.lm[dat$t>train.fraction*n]<-pred.lm[,1]
+  dat$X.lm.lwr[dat$t>train.fraction*n]<-pred.lm[,2]
+  dat$X.lm.upr[dat$t>train.fraction*n]<-pred.lm[,3]
+  dat$X.ts[dat$t>train.fraction*n]<-pred.ts$pred
+  dat$X.ts.lwr[dat$t>train.fraction*n]<-pred.ts$pred-qnorm(0.975)*pred.ts$se
+  dat$X.ts.upr[dat$t>train.fraction*n]<-pred.ts$pred+qnorm(0.975)*pred.ts$se
+  
+  # plot comparison of models
+  g1<-dat %>%
+    ggplot(aes(t,coalesce(X,X.lm),color=t>=train.fraction*n)) +
+    geom_ribbon(aes(ymin=coalesce(X,X.lm.lwr),ymax=coalesce(X,X.lm.upr),alpha=0.1),fill="orange2") +
+    geom_line() +
+    scale_color_economist() +
+    theme(legend.position="none") +
+    xlab("T") +
+    ylab("X") +
+    ggtitle("Linear Regression Forecast")
+  g2<-dat %>%
+    ggplot(aes(t,coalesce(X,X.ts),color=t>=train.fraction*n)) +
+    geom_ribbon(aes(ymin=coalesce(X,X.ts.lwr),ymax=coalesce(X,X.ts.upr),alpha=0.1),fill="orange2") +
+    geom_line() +
+    scale_color_economist() +
+    theme(legend.position="none") +
+    xlab("T") +
+    ylab("X") +
+    ggtitle("Time Series Forecast")
+  grid.arrange(g1,g2,ncol=1,nrow=2)
+}
+```
+
+## Time Series Data Overview
+
+(Univariate) time series data is defined as sequence data over time: ??1,??2,...,????
+
+where ?? is the time period and ???? is the value of the time series at a particular point
+
+Examples: daily temperatures in Boston, US presidential election turnout by year, minute stock prices
+
+Variables in time series models generally fall into three categories:
+
+(1) endogenous
+
+(2) random noise
+
+(3) exogenous
+
+All time series models involve (1) and (2) but (3) is optional.
+
+## Why Time Series?
+
+The answer is that:
+
+(1) many forecasting tasks actually involve small samples which makes machine learning less effective
+
+(2) time series models are more interpretable and less black box than machine learning algorithms
+
+(3) time series appropriately accounts for forecasting uncertainty.
+
+As an example, lets look at the following data generating process known as a random walk: ????=????-1+????
+
+We can compare the forecasting performance of linear regression to that of a basic time series model known as an AR(1) model.
+
+```{r}
+#run function to compare linear regression to basic AR(1) time series model
+compare.models(n=200)
+```
+
+## Key Concepts: Autocorrelation/Autocovariance
+
+Autocorrelation/autocovariance refers to the correlation/covariance between two observations in the time series at different points.
+
+The central idea behind it is how related the data/time series is over time.
+
+For ease of interpretation we typically focus on autocorrelation i.e. what is the correlation between ???? and ????+?? for some integer ?? .
+
+A related concept is partial autocorrelation that computes the correlation adjusting for previous lags/periods i.e. the autocorrelation between ???? and ????+?? adjusting for the correlation of ???? and ????+1 , Â , ????+??-1 .
+
+When analyzing time series we usually view autocorrelation/partial autocorrelation in ACF/PACF plots.
+
+Let's view this for the random walk model we analyzed above: ????=????-1+???? .
+
+```{r}
+# help function 
+# function to similate random walk
+sim.random.walk<-function(seed=30,n=1000,random.mean=0,random.sd=1) {data.frame("t"=1:n,"X"=cumsum(rnorm(n,random.mean,random.sd)))}
+```
+
+```{r}
+#simulate random walk
+dat<-sim.random.walk()
+
+#plot random walk
+dat %>% ggplot(aes(t,X)) + geom_line() + xlab("T") + ylab("X") + ggtitle("Time Series Plot")
+```
+
+```{r}
+#ACF plot
+ggAcf(dat$X,type="correlation") + ggtitle("Autocorrelation ACF Plot")
+```
+
+```{r}
+#PACF plot
+ggAcf(dat$X,type="partial") + ggtitle("Partial Autocorrelation PACF Plot")
+```
+
+## Key Concepts: Stationarity
+
+The second key concept in time series is stationarity.
+
+While the concept can get quite technical, the basic idea is examining whether the distribution of the data over time is consistent.
+
+There are two main forms of stationarity.
+
+(1) Strict stationarity imples:
+
+The cumulative distribution function of the data does not depend on time:
+
+\$F_X(X_1,...,X_T)=F_X(X\_{1+\\Delta},...,X\_{T+\\Delta})\$ \$\\forall \\Delta\\in\\mathbb{R}\$
+
+(2) Weak stationarity implies:
+
+\- the mean of the time series is constant
+
+\$E(X_t)=E(X\_{t+\\Delta})\$
+
+\- the autocovariance/autocorrelation only depends on the time difference between points
+
+\$ACF(X\_{t},X\_{t+\\Delta-1})=ACF(X_1,X\_{\\Delta})\$
+
+\- the time series has a finite variance
+
+\$Var(X\_\\Delta)\<\\infty\$ \$\\forall \\Delta\\in\\mathbb{R}\$
+
+## Checking for Stationarity
+
+```{r}
+## help function 
+sim.stationary.example<-function(seed=30,n=1000,random.mean=0,random.sd=1,B=1) {
+  data.frame("t"=1:n,
+             #nonstationary; differencing
+             "X1"=cumsum(rnorm(n,random.mean,random.sd)),
+             #nonstationary; detrending
+             "X2"=B*(1:n)+rnorm(n,random.mean,random.sd),
+             #stationary
+             "X3"=rnorm(n,random.mean,random.sd))  
+}
+```
+
+```{r}
+#create three time series for example
+df<-sim.stationary.example(n=1000)
+```
+
+Check a plot of the time series over time and look for constant mean and finite variance i.e. values appear bounded.
+
+```{r}
+#plot nonstationary and stationary time series
+g1 <- ggplot(data = df , aes(x = t , y= X1)) +
+      geom_line()+
+      xlab("T") + 
+      ylab("X1")+
+      ggtitle("Nonstationary")
+
+g2 <- ggplot(data = df , aes(x = t , y= X3)) +
+      geom_line()+
+      xlab("T") + 
+      ylab("X3")+
+      ggtitle("stationary")
+
+grid.arrange(g1,g2)
+```
+
+Look at the ACF plot and see if it dies off quickly as opposed to a gradual decline.
+
+```{r}
+#ACF for nonstationary and stationary time series
+g1 <- ggAcf(df$X1 , type = "correlation") +
+    xlab("T") + 
+    ylab("X1") +
+    ggtitle("nonstationary")
+
+g2 <- ggAcf(df$X3 , type = "correlation")+
+    xlab("T") + 
+    ylab("X1")+
+    ggtitle("stationary")
+
+grid.arrange(g1,g2)
+```
+
+Perform unit root tests such as the Augmented DickeyÂFuller test.
+
+```{r}
+#perform unit test; nonstationary example has large, non-significant p-value
+adf.test(df$X1)
+```
+
+```{r}
+#perform unit test; stationary example has small, significant p-value
+adf.test(df$X3)
+```
+
+## Transforming for Stationarity
+
+### Differencing
+
+Differencing involves taking differences between successive time series values.
+
+The order of differencing is defined as p for \$X_t-X\_{t-p}\$.
+
+Let's transform a nonstationary time series to stationary by differencing with the random walk model.
+
+In a random walk \$X_t=X\_{t-1}+\\epsilon_t\$ where \$\\epsilon_t\\sim N(0,\\sigma\^2)\$ iid.
+
+Differencing with an order of one means that \$\\tilde{X}\_t=X_t-X\_{t-1}=\\epsilon_t\$.
+
+```{r}
+#difference time series to make stationary
+diff <- df$X1 - lag(df$X1,1)
+```
+
+```{r}
+#plot original and differenced time series
+g1 <- ggAcf(df$X1 , type = "correlation")
+g2 <- ggAcf(diff , type = "correlation")
+
+grid.arrange(g1,g2)
+```
+
+## Detrending
+
+Detrending involves removing a deterministic relationship with time.
+
+As an example suppose we have the following data generating process \$X_t=B_t+\\epsilon_t\$ where \$\\epsilon_t\\sim N(0,\\sigma\^2)\$ iid.
+
+Detrending involves using the transformed time series \$\\tilde{X}\_t=X_t-Bt=\\epsilon_t\$.
+
+```{r}
+#detrend time series to make stationary
+```
+
+```{r}
+#plot original and detrended time series
+```
+
+Basic Model Types: AR(p), MA(q), ARMA(p,q), ARIMA(p,d,q), Decomposition
+
+Autoregressive AR(p) Models
+
+AR models specify ???? as a function of lagged time series values ????-1 , ????-2 , ...
+
+i.e ????=??+??1????-1+...+????????-??+????
+
+where ?? is a mean term and ????\~????????(0,??2) is a random error.
+
+When fitting an AR model the key choice is p, the number of lags to include.
+
+Moving Average MA(q) Models
+
+MA models specify ???? using random noise lags:
+
+????=??+????+T1????-1+...+T??????-??
+
+where ?? is a mean term and ????\~????????(0,??2) is a random error.
+
+Similar to an AR model, when fitting an MA model the key choice is q, the number of random shock lags.
+
+Autoregressive Moving Average ARMA(p,q) Models
+
+ARMA(p,q) models are a combination of an AR and MA model:
+
+????=??+??1????-1+...+????????-??+????+T1????-1+...+T??????-??
+
+where ?? is a mean term and ????\~????????(0,??2) is a random error.
+
+When fitting an ARMA model, we need to choose two things: p, the number of AR lags, and q, the number of MA lags.
+
+Autoregressive Integrated Moving Average ARIMA(p,d,q) Models
+
+ARIMA(p,d,q) is an ARMA model with differencing.
+
+When fitting an ARIMA model we need to choose three things: p, the number of AR lags, q, the number of MA lags, and d, the number of differences to use.
+
+Decomposition ModelsÂ¶
+
+Decomposition models specify ???? as a combination of a trend component ( ???? ), seasonal component ( ???? ), and an error component/residual ( ???? ) i.e. ????=??(????,????,????) .
+
+Common decomposition forms are: ????=????+????+???? or ????=????\*????\*???? (where then take logs to recover the additive form).
+
+There are various ways to estimate the different trend components: exponential smoothing, state space models/Kalman filtering, STL models, etc.
+
+In this project we will cover STL models because of their ease of use and flexibility.
+
+```{r}
+
+```
+
+Fitting AR/MA/ARMA/ARIMA models with the Box Jenkins Method
+
+We will now go over how to fit AR/MA/ARMA/ARIMA models on a real data set and review a generic strategy for fitting them known as the Box Jenkins method.
+
+This process involves several steps to help identify the p, d, and q parameters that we need:
+
+Identify whether the time series is stationary or not
+
+Identify p, d, and q of the time series by
+
+Making the the time series stationary through differencing/detrending to find d
+
+Looking at ACF/PACF to find p and q
+
+Using model fit diagnostics like AIC or BIC to select the best model to find p, d, and q
+
+Check the model fit using the LjungÂBox test
+
+```{r}
+#load data
+ur = read.csv("data/Mass_Monthly_Unemployment_Rate.csv")
+```
+
+```{r}
+# check date class
+class(ur$DATE)
+```
+
+```{r}
+#change date class to date type
+ur$DATE <- as.Date(ur$DATE)
+class(ur$DATE)
+```
+
+## Checking for Stationarity
+
+```{r}
+#check time series plot
+ggplot(ur,aes(x= DATE , y= MAURN)) + geom_line()
+```
+
+```{r}
+#check ACF plot
+ggAcf(ur$DATE , type = "correlation")
+```
+
+```{r}
+#run ADF test
+adf.test(ur$DATE)
+```
+
+## Transforming for Stationarity & Identifying Model Parameters
+
+```{r}
+# fit AR model
+ar.model = auto.arima(ur$MAURN , max.d = 0 ,max.q = 0 ,allowdrift =T)
+ar.model
+```
+
+```{r}
+# fit ma model
+ma.model = auto.arima(ur$MAURN , max.d = 0 ,max.p = 0 ,allowdrift =T)
+ma.model
+```
+
+```{r}
+# fit ARMA model
+arma.model = auto.arima(ur$MAURN , max.d = 0  ,allowdrift =T)
+arma.model
+```
+
+```{r}
+# fit ARiMA model
+arima.model = auto.arima(ur$MAURN  ,allowdrift =T)
+arima.model
+```
+
+## Checking the Residuals of the Model Fit
+
+```{r}
+#calculate residuals of each model
+ar.residual <- resid(ar.model)
+ma.residual <- resid(ma.model)
+arma.residual <- resid(arma.model)
+arima.residual <- resid(arima.model)
+```
+
+```{r}
+#plot PACF plot of each models residuals
+ggAcf(ar.residual, type ="partial")
+ggAcf(ma.residual, type ="partial")
+ggAcf(arma.residual, type ="partial")
+ggAcf(arima.residual, type ="partial")
+```
+
+```{r}
+#run the Ljung Box test on the residuals
+Box.test(ar.residual , type = "Ljung-Box" ,lag = 1)
+Box.test(ma.residual , type = "Ljung-Box" ,lag = 1)
+Box.test(arma.residual , type = "Ljung-Box" ,lag = 1)
+Box.test(arima.residual , type = "Ljung-Box" ,lag = 1)
+```
+
+## Making a forecast for each model
+
+```{r}
+#make forecast for each model
+ar.forecast <- forecast(ar.model , h = 24 , level =80)
+ma.forecast <- forecast(ma.model , h = 24 , level =80)
+arma.forecast <- forecast(arma.model , h = 24 , level =80)
+arima.forecast <- forecast(arima.model , h = 24 , level =80)
+```
+
+```{r}
+#plot forecast for each model
+g1 <- autoplot(ar.forecast)
+g2 <- autoplot(ma.forecast)
+g3 <- autoplot(arma.forecast)
+g4 <- autoplot(arima.forecast)
+```
+
+```{r}
+grid.arrange(g1,g2,g3,g4,nrow =2 , ncol =2)
+```
+
+## Fitting Seasonal Trend Loess (STL) Decomposition Models
+
+```{r}
+#transform to time series object; need to specify frequency
+ur.ts = ts(ur$MAURN , frequency = 12)
+```
+
+```{r}
+#fit stil model
+stl.model <- stl(ur.ts , s.window =  "periodic")
+```
+
+```{r}
+#plot model fit
+autoplot(stl.model)
+```
+
+```{r}
+#make forecast
+stl.forecast = forecast(stl.model , h= 24 , level =80)
+```
+## What is Time Series Decomposition
+
+**To decompose a time series into components [Brockwell and Davis, 2016]:**\
+
+-   I Trend component: long term trend
+
+-   I Seasonal component: seasonal variation
+
+-   I Cyclical component: repeated but non-periodic fluctuations
+
+-   I Irregular component: the residuals
+
+```{r}
+# Decomposition
+## time series decomposation
+apts <- ts(AirPassengers, frequency = 12)
+f <- decompose(apts)
+plot(f$figure, type = "b") # seasonal figures
+plot(f)
+```
+
+## Time Series Forecasting
+
+**To forecast future events based on known past data\
+\**For example, to predict the price of a stock based on its past performance\
+\**Popular models\
+\**Autoregressive moving average (ARMA)\
+\**Autoregressive integrated moving average (ARIMA)**
+
+### Forecasting
+
+```{r}
+## build an ARIMA model
+fit <- arima(AirPassengers, order=c(1,0,0),
+list(order=c(2,1,0), period=12))
+## make forecast
+fore <- predict(fit, n.ahead=24)
+## error bounds at 95% confidence level
+upper.bound <- fore$pred + 2*fore$se
+lower.bound <- fore$pred - 2*fore$se
+
+## plot forecast results
+ts.plot(AirPassengers, fore$pred, upper.bound, lower.bound,
+col = c(1, 2, 4, 4), lty = c(1, 1, 2, 2))
+legend("topleft", col = c(1, 2, 4), lty = c(1, 1, 2),
+c("Actual", "Forecast", "Error Bounds (95% Confidence)"))
+```
+## Time Series Clustering
+
+\**To partition time series data into groups based on similarity or distance, so that time series in the same cluster are similar\
+\**Measure of distance/dissimilarity\
+\**Euclidean distance\
+\**Manhattan distance\
+\**Maximum norm\
+\**Hamming distance\
+\**The angle between two vectors (inner product)\
+\**Dynamic Time Warping (DTW) distance\
+
+### Dynamic Time Warping (DTW)
+
+DTW finds optimal alignment between two time series [Keogh and Pazzani, 2001].
+
+```{r}
+## Dynamic Time Warping (DTW)
+library(dtw)
+idx <- seq(0, 2 * pi, len = 100)
+a <- sin(idx) + runif(100)/10
+b <- cos(idx)
+align <- dtw(a, b, step = asymmetricP1, keep = T)
+dtwPlotTwoWay(align)
+```
+
+### Synthetic Control Chart Time Series
+
+I The dataset contains 600 examples of control charts synthetically generated by the process in Alcock and Manolopoulos (1999). I Each control chart is a time series with 60 values. I Six classes: I 1-100 Normal I 101-200 Cyclic I 201-300 Increasing trend I 301-400 Decreasing trend I 401-500 Upward shift I 501-600 Downward shift
+
+```{r}
+# read data into R
+# sep="": the separator is white space, i.e., one
+# or more spaces, tabs, newlines or carriage returns
+sc <- read.table("./data/synthetic_control.data", header=F, sep="")
+# show one sample from each class
+idx <- c(1, 101, 201, 301, 401, 501)
+sample1 <- t(sc[idx,])
+plot.ts(sample1, main="")
+```
+
+### Hierarchical Clustering with Euclidean distance
+
+```{r}
+# sample n cases from every class
+n <- 10
+s <- sample(1:100, n)
+idx <- c(s, 100 + s, 200 + s, 300 + s, 400 + s, 500 + s)
+sample2 <- sc[idx, ]
+observedLabels <- rep(1:6, each = n)
+## hierarchical clustering with Euclidean distance
+hc <- hclust(dist(sample2), method = "ave")
+plot(hc, labels = observedLabels, main = "")
+
+# cut tree to get 8 clusters
+memb <- cutree(hc, k = 8)
+table(observedLabels, memb)
+```
+
+## Hierarchical Clustering with DTW Distance
+
+```{r}
+# hierarchical clustering with DTW distance
+myDist <- dist(sample2, method = "DTW")
+hc <- hclust(myDist, method = "average")
+plot(hc, labels = observedLabels, main = "")
+# cut tree to get 8 clusters
+memb <- cutree(hc, k = 8)
+table(observedLabels, memb)
+```
+### Time Series Classification
+
+\**To build a classification model based on labelled time series\
+\**and then use the model to predict the lable of unlabelled time \**series\
+Feature Extraction\
+\**Singular Value Decomposition (SVD)\
+\**Discrete Fourier Transform (DFT)\
+\**Discrete Wavelet Transform (DWT)\
+\**Piecewise Aggregate Approximation (PAA)\
+\**Perpetually Important Points (PIP)\
+\**Piecewise Linear Representation\
+\**Symbolic Representation
+
+### Decision Tree (ctree)
+
+```{r}
+## build a decision tree
+library(zoo)
+classId <- rep(as.integer(c(1:6)), each = 100)
+
+newSc <- data.frame(cbind(classId, sc))
+
+library(party)
+ct <- ctree(classId ~ ., data = newSc,
+controls = ctree_control(minsplit = 20,
+minbucket = 5, maxdepth = 5))
+
+
+pClassId <- predict(ct)
+table(classId, pClassId)
+
+# accuracy
+(sum(classId == pClassId))/nrow(sc)
+```
+
+DWT (Discrete Wavelet Transform) \**Wavelet transform provides a multi-resolution representation using wavelets [Burrus et al., 1998]. \**Haar Wavelet Transform -- the simplest DWT <http://dmr.ath.cx/gfx/haar/> \*\*DFT (Discrete Fourier Transform): another popular feature extraction technique
+
+```{r}
+# extract DWT (with Haar filter) coefficients
+library(wavelets)
+wtData <- NULL
+for (i in 1:nrow(sc)) {
+a <- t(sc[i, ])
+wt <- dwt(a, filter = "haar", boundary = "periodic")
+wtData <- rbind(wtData, unlist(c(wt@W, wt@V[[wt@level]])))
+}
+wtData <- as.data.frame(wtData)
+wtSc <- data.frame(cbind(classId, wtData))
+
+## build a decision tree
+ct <- ctree(classId ~ ., data = wtSc,
+
+controls = ctree_control(minsplit=20, minbucket=5,
+
+maxdepth=5))
+
+pClassId <- predict(ct)
+table(classId, pClassId)
+## pClassId
+## classId 1 2 3 4 5 6
+## 1 98 2 0 0 0 0
+## 2 1 99 0 0 0 0
+## 3 0 0 81 0 19 0
+## 4 0 0 0 74 0 26
+## 5 0 0 16 0 84 0
+## 6 0 0 0 3 0 97
+(sum(classId==pClassId)) / nrow(wtSc)
+## [1] 0.8883333
+plot(ct, ip_args = list(pval = F), ep_args = list(digits = 0))
+```
+
+## k-NN Classification
+
+I find the k nearest neighbours of a new instance I label it by majority voting I needs an efficient indexing structure for large datasets
+
+```{r}
+## k-NN classification
+k <- 20
+newTS <- sc[501, ] + runif(100) * 15
+distances <- dist(newTS, sc, method = "DTW")
+s <- sort(as.vector(distances), index.return = TRUE)
+# class IDs of k nearest neighbours
+table(classId[s$ix[1:k]])
+```
+
+## Where to go Next
+
+\- Advanced time series models
+
+-   ARCH, GARCH, etc. that model changing variance over time
+
+\- Vector Autoregression (VAR)
+
+-   For multivariate i.e. multiple time series and modeling dependencies between them
+
+\- Machine Learning
+
+-   How to do CV with time series
+
+-   Neural networks for sequence data (LSTMs, etc.)
+
+\- Spatial Statistics
+
+-   Generalize time dependence to spatial dependence in multiple dimensions
+
+\- Econometrics
+
+-   Cointegration
+
+-   Granger Causality
+
+-   Serial correlation
+
+-   Regression with time series data
+
+\- Bayesian time series

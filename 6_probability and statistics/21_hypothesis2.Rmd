@@ -1,0 +1,443 @@
+---
+title: "hypoyhesis2"
+author: "Bakro"
+date: "1/2/2022"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+load(url("http://dwoll.de/rKompakt/dat.Rdata"))
+```
+
+
+## (I) Statistical tests of individual key figures 
+(8.1.1) Test for the proportional value: binomial test
+(8.3.1) Test of the median: Wilcoxon signed rank test
+(7.3.1) Test for the expected value: t-test
+(7.3.2) Test for the expected value for two independent samples
+(7.3.3) Test for the expected value for two dependent samples
+(7.2) Test for the variance: Levene test
+
+
+### (8.1.1) Test for the proportional value: Binomial test 
+
+Task: Speaks the number of randomly drawn men and
+Women for the fact that women in general more often than
+ Men are drawn?
+
+
+ The binomial test is to be used on data of variables that have only two
+ Can take on forms. One expression is a hit or
+Denotes success. The test checks whether the empirical frequency of occurrence
+ of a hit in a sample against the H0 of a particular hit-
+ probability p0 speaks.
+
+ binom.test (x = <number of successes>, n = <sample size>, p = 0.5,
+ alternative = c ("two.sided", "less", "greater"))
+
+ Generation of the empirical frequencies in tabular form with specification of
+ Class, fashion and table of values
+```{r}
+
+tblEmpFreq_n <- xtabs(formula = ~ sex, data = datW) 
+ tblEmpFreq_n
+
+
+# Specification of the probability for the binomial distribution
+
+vnProb <- 0.5
+
+# Binomialtest
+
+binom.test(tblEmpFreq_n, p = vnProb, alternative = "less")
+
+```
+
+### (8.3.1) Test for the median: Wilcoxon signed rank test
+
+Task: Does the IQ have the theoretical median 100?
+
+The Wilcoxon Signed Rank Test checks for a sample
+  determined values of a variable with symmetrical distribution with the
+  H0 are compatible that their median is equal to a certain value m0
+  is.
+
+wilcox.test (x = <vector>,
+              alternative = c ("two.sided", "less", "greater"),
+              mu = 0, conf.int = FALSE)
+
+  Specify the assumed median of the symmetrical distribution:
+  
+```{r}
+vnMedianH0 <- 100
+
+# Wilcoxon-Vorzeichen-Rang-Test
+
+wilcox.test(x = datW$iq, alternative = "two.sided", 
+            mu = vnMedianH0, conf.int = TRUE)
+```
+
+
+### (7.3.1) Test for the expected value: t-test 
+  Task: Is the expected value of the IQ equal to 100?
+
+
+The simple t-test checks whether the values of a normally distributed variable determined in a sample are compatible with the H0 that this variable has a certain expected value 0. "
+
+  t.test (x = <vector>, alternative = c ("two.sided", "less", "greater"),
+         mu = 0)
+         
+```{r}
+MuH0 <- 100
+
+t.test(datW$iq, alternative = "two.sided", mu = MuH0) 
+```
+
+### (7.3.2) Test of the expected value for two independent samples
+
+Task: Is the attention after the intervention
+                  less for women than for men?
+
+
+ "In the t-test for independent samples, those are divided into two groups
+determined values of a normally distributed variable are then checked,
+ whether they are compatible with the H0 that the variable in the associated
+ Conditions has the same expected value. "
+
+ t.test (x = <vector>, y = <vector>, paired = FALSE,
+        alternative = c ("two.sided", "less", "greater"),
+       var.equal = FALSE)
+
+ "The paired argument is used to determine whether they are independent (FALSE)
+ or dependent (TRUE) samples. "
+ "var.equal indicates whether there is homogeneity of variance in the two conditions
+ should be assumed. "
+
+ For one-sided tests (also called directed tests) "it should be noted
+ that the order of the groups is different from the order of the factor levels
+ determined in the independent variable - here f before m.
+ 
+```{r}
+t.test(attention.post ~ sex, data = datW, alternative = "less",
+       var.equal=TRUE)
+```
+ 
+Assumption 2: No homogeneity of variance
+
+  R uses "the variant of the t-test called the Welch test with a
+  modified calculation of the test statistics and the degrees of freedom: 
+  
+```{r}
+t.test(attention.post ~ sex, data=datW, alternative="less",
+       var.equal=FALSE)
+```
+
+
+### (7.3.3) Test for the expected value for two dependent samples
+Task: Is there a difference in verbal attention before and after the intervention?
+
+
+"The t-test for dependent samples tests whether the expected values of a
+variables collected in pairs in two conditions are identical. He will
+like that done for independent samples, but here it is
+Use argument paired = TRUE for t.test (). The test assumes
+that the data given in x and y can be assigned to each other in pairs
+so x and y must be the same length. "
+
+Pre-post comparison with data in wide format (datW)
+
+```{r}
+with(datW, t.test(attention.pre, attention.post, paired=TRUE))
+```
+
+### (7.2) Test for variance: Levene test
+
+Task: Are the variances in verbal performance the same in all groups before and after the intervention?
+
+
+  "The package car, which contains the function leveneTest (), is required for the Levene test for homogeneity of variance in two or more samples.
+
+```{r warning=FALSE , message=FALSE}
+library(car)
+
+leveneTest(verbal.pre ~ group, data=datW)
+
+# Error in t.test.formula(verbal.pre ~ group, data = datW) : grouping factor must have #exactly 2 levels
+#t.test(verbal.pre ~ group, data=datW)
+```
+Since the Levene test is ultimately an analysis of variance, the
+Output an empirical F value with degrees of freedom of
+  Effect and residual sum of squares (Df) and the corresponding p-value
+(Pr (> F)). Walk in the analysis of variance done in the Levene test
+  instead of the original values of the Var. the respective amounts
+  their difference to the corresponding group median. "
+  "For the multi-factorial analysis of variance situation, this is
+  Adapt the model formula accordingly. "(See analysis of variance!).
+
+Check all combinations of gender and group conditions
+```{r}
+leveneTest(verbal.pre ~ sex * group, data=datW)
+```
+
+## (II) Statistical Tests on Distributions
+  (8.1.2) X2 test on fixed distribution
+  (8.1.4) X2 test for several probabilities of occurrence
+  (8.3.2) Wilcoxon rank sum test / Mann-Whitney U test for independent StPro
+  (8.3.3) Kruskal-Wallis-H-Test for independent samples
+  (8.3.4) Friedmann test for several dependent samples
+  (7.1) Test for normal distribution  
+  
+###(8.1.2) X2 test on fixed distribution
+
+Test for frequencies
+
+Task: Do all hair colors have the same probability of occurrence?
+
+
+The X2 Fixed Distribution Test tests data on categorical variables to determine whether the empirical frequencies of each category are compatible with a theoretical distribution under H0 that indicates the probability of each category. As an omnidirectional H1
+ it turns out that the actual distribution is not the same as under H0. 8.1 Analyzing Frequencies of Categorical Variables 177
+
+ chisq.test (x = <frequencies>, p = <probabilities>,
+          simulate.p.value = FALSE)
+
+ The vector that contains the empirical absolute must be specified under x
+ Frequency of occurrence of the categories includes. This can e.g. B. be a frequency table as a result of xtabs (). A vector is to be entered under p which contains the probabilities for the occurrence of the categories under H0 and which must have the same length as x. Kicking expected
+Frequencies of categories (the product of the class probabilities
+with the sample size) <5, the argument simulate.p.value should be set to TRUE. Otherwise, R issues a warning in such a situation that the X2 approximation may still be inadequate. "  
+  
+```{r}
+tblhair <- xtabs(~ hair, data = datW) 
+tblhair
+
+
+
+# number of  hair groups 
+
+len <- length(tblhair) 
+len
+
+# equal distribution
+
+prop <- rep(1/len, len)
+
+# Test durchfuehren
+
+chisq.test(tblhair, p = prop)
+```
+
+### (8.1.4) X2 test for several probabilities of occurrence
+         Test for frequencies
+         
+ Task: Is there the same probability of being hit in the three groups?
+
+
+"Checks for a dichotomous variable in more than one condition
+prop.test () whether the hit probability in all conditions
+ is the same. So it is a hypothesis about the equality of
+ Distributions of a variable in several conditions. The H1 is omnidirectional.
+
+prop.test (x = h number of successes, n = h sample sizes, p = NULL)
+
+"The arguments x, n and p refer to the number of hits that
+ Sample sizes and the hit probabilities under H0 in the
+Groups. For them, vectors of the same length can be specified with entries for each group. Instead of x and n, a matrix with two columns is also possible, with the number of hits and rivets in each row
+ for one group each. Without specifying p, prop.test () tests the hypothesis that the hit probability is the same in all conditions.
+
+```{r}
+Total <- c(5000, 5000, 5000) 
+
+
+Hits <- c(585, 610, 539) 
+
+# Test durchfuehren
+
+prop.test(Hits, Total)
+```
+ "The output includes the value of the asymptotically X2-distributed
+  Test statistics (X-squared) including the associated p-value (p-value)
+together with the degrees of freedom (df) and finally the relative
+Success rates in the groups (sample estimates).
+
+### (8.3.3) Kruskal-Wallis-H test for independent samples
+
+Test for frequencies
+
+Task: Are the mean values of the central AV in theFollow-up phase between groups the same or different?
+
+
+  "The Kruskal-Wallis-H-Test generalizes the question of one
+Wilcoxon tests for situations in which the values of a variable were found in more than two independent samples. Under H0, the distributions of the variable in the associated conditions are identical. The unspecific H1 means that at least two location parameters differ.
+
+kruskal.test (formula = <model formula>, data = <data set>)
+
+```{r}
+kruskal.test(DV.fup ~ group, data=datW)
+```
+
+
+### (8.3.4) Friedmann test for several dependent samples 
+Test for frequencies
+
+ Task: Is there a difference in attention in the phases before and after the intervention or in the follow-up phase?
+
+The rank sum test according to Friedman is used to analyze data of a variable that was collected in several dependent samples. As in the Kruskal-Wallis-H-Test, the H0 is checked that the distribution of the variable is identical in all conditions. The unspecific H1 means that at least two location parameters differ.
+
+friedman.test (y = <data>, groups = <factor>, blocks = <factor>)
+
+ "The data must be in long format: The vector of all data must be specified under y. A factor of the same length as y is passed as the second argument for groups, which encodes the group membership of each observation in y. Blocks is also a Factor of the same length as y and specifies for each observation in y to which block it belongs - e.g. from
+ which test subject it comes from if the measurement is repeated. Alternatively, a model formula of the form y ~ groups | Call blocks with the same meanings. If the variables used in the model formula come from a data record, this must be entered for the data argument. "
+
+"First select only the relevant variables and eliminate duplicate entries (from 5 measurement times per phase):"
+
+```{r}
+datSub <- subset(datL, select=c(ID, attention, phase))
+datUnique <- unique(datSub)
+
+friedman.test(attention ~ phase | ID, data = datUnique)
+```
+
+### (7.1) Test for normal distribution
+Graphic: quantile-quantile plot (Q-Q plot / diagram)
+
+```{r}
+library(ggplot2)
+
+ggplot(data = datW, aes(sample = iq)) + 
+   stat_qq(colour = "red") +
+   stat_qq_line(colour = "blue", size = 1) +
+   xlab("theoretical") + ylab("sample")
+```
+
+"The Kolmogorov-Smirnov test for a fixed distribution compares the cumulative relative frequencies of data of a continuous variable with a freely selectable distribution function - for example that of a certain normal distribution. Against the H0 that the distribution function is the same as the one specified , an omnidirectional as well as directional H1 can be tested. "
+
+  ks.test (x = <vector>, y = "<name of the distribution function>", ...,
+         alternative = c ("two.sided", "less", "greater"))
+
+  "The data vector is to be entered under x and the distribution
+  function of the variable under H0 (see section 5.2.2). The ... ellipses are used to pass comma-separated arguments to this distribution function for its exact specification.
+```{r}
+ks.test(datW$iq, "pnorm", mean = 100, sd = 15, alternative="two.sided")
+```
+###  Shapiro-Wilk
+"The Shapiro-Wilk test that can be called via shapiro.test () is one
+another alternative for the test on an unspecified one
+  Normal distribution.
+```{r}
+shapiro.test(datW$iq)
+```
+
+
+## (III) Statistical tests for correlations
+
+  (8.2.2) Test for connection between categorical variables
+  (8.1.3) X2 test for independence
+  (8.1.5) Fisher's exact test for independence
+  (8.2.1) Test for the connection of continuous ordinal variables
+  (6.1) Test of the correlation coefficient  
+  
+### (8.2.2) Test for connection between categorical variables
+
+Task: Do hair and eye color have a common distribution?
+
+"The Phi coefficient, its generalization Cramars V and the
+Contingency coefficient CC. The characteristic values (and a few others) can be determined with Assocs () from the DescTools package.  
+```{r}
+library(DescTools)
+tbl_hair_eyes <- xtabs(~ hair + eye, data = datW)
+tbl_hair_eyes 
+
+# Ausfuehren des Tests:
+Assocs(tbl_hair_eyes)
+```
+
+
+### X2 test of independence 
+
+```{r}
+tbl_hair_eyes <- xtabs(~ hair + eye, data = datW)
+tbl_hair_eyes 
+addmargins(tbl_hair_eyes)
+chisq.test(tbl_hair_eyes)
+```
+
+
+### (8.1.5) Fisher's exact test of independence
+
+Test for frequency of categorical variables
+
+ Task: Are gender and the attention dichotomized by median split linked?
+
+"If two dichotomous variables are collected in a sample, Fisher's exact test can be used to test the H0 that both variables
+ are independent.1 Directed alternative hypotheses are also about
+ the connection possible. "
+
+ fisher.test (x, y = NULL, alternative = c ("two.sided", "less", "greater"))
+
+"Under x, either the (2x2) contingency table of two dichotomous variables or a factor with two levels that contains the values ​​of the first dichotomous variable must be specified. In this case, a factor y with two levels and the same length must also be specified nge as x are given, the data of the same
+Includes observation objects. The alternative argument determines whether the test should be double-sided, left-sided, or right-sided. The direction of the question relates to the size of the odds ratio in the theoretical contingency table. Testing on the left means that under H1 the odds ratio is <1 (negative relationship), testing on the right means that it is> 1 (positive relationship). "
+
+```{r}
+
+tbl_sex_attFac <- xtabs(~ sex + attFac, data=datW) 
+tbl_sex_attFac
+addmargins(tbl_sex_attFac)
+
+
+
+fisher.test(tbl_sex_attFac, alternative="two.sided")
+```
+Results output:
+"In addition to the p-value, the output contains the confidence interval
+for the odds ratio and the conditional maximum likelihood estimate of the
+Odds ratio for the given marginal frequencies (sample estimates). "
+
+"For data of a dichotomous variable from two independent samples
+Fisher's exact test checks the H0 that the variables in both
+Conditions have an identical probability of success. The call to fisher.test () is identical to that used for testing independence. "
+
+ "Odds Ratio
+The odds ratio (OR) is a measure of the relationship between two dichotomous variables and results from the (2x2) contingency table of their common frequencies: (a b, c d). The OR is calculated by division
+the so-called betting quotients (odds) a / b and c / d, i.e. as a * d / b * c. It can be determined using the OddsRatio () function from the DescTools package. It accepts the contingency table of absolute frequencies as an argument and outputs a confidence interval for the level conf.level. "
+```{r}
+tbl_sex_attFac <- xtabs(~ sex + attFac, data=datW) 
+
+OddsRatio(tbl_sex_attFac, conf.level = 0.95)
+```
+### Test for the connection of continuous ordinal variables
+
+```{r}
+# Spearmans rho
+with(datW, cor(attention, verbal, method="spearman"))     # 0.2996037
+
+# Kendalls tau-b
+with(datW, cor(attention, verbal, method="kendall"))      #0.2035153
+
+cor.test(~ attention + verbal, data=datW, method="spearman")
+cor.test(~ attention + verbal, data=datW, method="kendall")
+
+```
+
+# Test of the correlation coefficient
+Task: Are attention and verbal ability to perform correlated with each other?
+
+ cor.test(x = <Vektor1>, y = <Vektor2>,
+          alternative=c("two.sided", "less", "greater"))
+
+
+```{r}
+cor.test(~ attention + verbal, data=datW)
+```
+
+https://www.geo.fu-berlin.de/en/v/soga/Basics-of-statistics/Continous-Random-Variables/The-Normal-Distribution/index.html

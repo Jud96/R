@@ -1,0 +1,492 @@
+---
+title: "Factors"
+author: "Abdulmajid Bakro"
+date: "6/10/2021"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r   include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# klippy::klippy()
+```
+
+# Factors 
+## forcats
+
+the **forcats** package provides tools for working with factors ,which
+are R's data structure for categorial data (datatype for factors always
+numeric ) <br>
+
+```{r  message=FALSE}
+# klippy::klippy(position = c('center', 'right'))
+library(forcats)
+library(ggplot2)
+library(dplyr)
+```
+
+factors : R represent categorical data with factors . A factor is an
+integer vector with a **levels** attribute that stores a set of mappings
+between integers and categorical values ,when you view a factor , R
+display not the integers , burt the levels associated with them <br>
+factor(x=character(),levels,labels = levels, exclude = NA , ordered =
+is.ordered(x),nmax = NA)
+
+```{r create a factor with factor()}
+
+f <- factor(c('a','b','c','c','b','a'),levels = c('a','b','c') )
+```
+
+to convert a vector to a factor using as_factor()
+
+```{r convert factor }
+
+vec <- c('a','b','c','c','b','a')
+fac <-as_factor(vec)
+fac
+```
+
+return levels
+
+```{r}
+levels(fac)
+```
+
+structure of factors
+
+```{r}
+ summary(fac)
+unclass(fac)
+```
+
+# inspect Factors
+
+count number of values with each levels
+
+```{r}
+fct_count(fac,sort =FALSE ,prop = FALSE)
+fct_count(iris$Species,sort =FALSE ,prop = FALSE)
+```
+
+check for levels in factor
+
+```{r}
+fct_match(fac,"a")
+```
+
+return the unique values , removing duplicate
+
+```{r}
+fct_unique(fac)
+```
+
+## combine Factors 
+
+fct_c(...) combine factors with different levels Also **fct_cross**
+
+```{r}
+fct1 <- factor(c("a","b"))
+fct2 <- factor(c("c","b"))
+fct_c(fct1,fct2)
+```
+
+fct_unify(fs, levels =lvls_union(fs)) Standardizelevels across a list of
+factors. <br>
+
+```{r}
+fs <- list(factor("a"), factor("b"), factor(c("a", "b")))
+fct_unify(fs)
+```
+
+## change order of levels {#change_order_levels}
+
+```{r intro to order factors}
+faInt <- factor(c(0L, 1L, 2L, 2L, 0L, 1L))
+faIntOrd <- ordered(faInt)
+faIntOrd
+faIntOrd < 2 # only given values
+faIntOrd < 3 # NAs
+```
+
+fct_relevel(.f, ..., after = 0L) Manually reorder factor levels.
+
+```{r}
+fct_relevel(f, c("b", "c", "a"))
+fct_relevel(f, "a", after = 1)
+fct_relevel(f, "a", after = Inf)
+```
+
+fct_infreq(f, ordered = NA) <br> Reorder levels by the frequency in
+which they appear in the data (highest frequency first). Also
+fct_inseq().
+
+```{r}
+f3 <- factor(c("c", "c", "a"))
+fct_infreq(f3)
+
+```
+
+fct_inorder(f, ordered = NA) Reorder levels by order in which they
+appear in the data.
+
+```{r}
+f2 <- factor(c("b","a","c"))
+fct_inorder(f2)
+```
+
+fct_rev(f) Reverse level order.
+
+```{r}
+f4 <- factor(c("a","b","c"))
+fct_rev(f4)
+```
+
+fct_shift(f) Shift levels to left or right, wrapping around end.
+
+```{r}
+f4 <- factor(c("a","b","c"))
+fct_shift(f4)
+```
+
+fct_shuffle(f, n = 1L) Randomly permute order of factor levels.
+fct_shuffle(f4)
+
+```{r}
+f4 <- factor(c("a","b","c"))
+fct_shuffle(f4)
+```
+
+fct_reorder(.f, .x, .fun = median, ..., .desc = FALSE) Reorder levels by
+their relationship with another variable.
+
+```{r}
+head(PlantGrowth)
+boxplot(PlantGrowth$weight ~ PlantGrowth$group)
+
+boxplot(data = PlantGrowth,
+weight ~ reorder(group, weight))
+```
+
+```{r}
+faGeschl <- factor(c(rep("W", each = 10), 
+                     rep("M", each = 10), 
+                     rep("D", each = 10)))
+faGeschl
+vnGew_W <- c(58.10, 54.65, 58.03, 56.83, 60.44, 65.92, 61.38, 59.10, 
+             59.66, 54.65)
+vnGew_M <- c(84.84, 80.02, 78.80, 82.45, 81.30, 77.47, 82.61, 85.35, 
+             78.41, 81.62)
+vnGew_D <- c(67.53, 67.31, 72.68, 69.65, 63.38, 2.14, 63.13, 71.31, 
+             75.00, 69.72)
+vnGew <- c(vnGew_W, vnGew_M, vnGew_D)
+
+faGeschlReOrd <- reorder(faGeschl, vnGew, FUN = mean)
+faGeschlReOrd
+```
+
+fct_reorder2(.f, .x, .y, .fun = last2, ..., .desc = TRUE) Reorder levels
+by their final values when plotted with two other variables.
+
+```{r}
+ggplot(diamonds,aes(carat, price,
+color = fct_reorder2(color, carat,
+price))) + geom_smooth(ls = F)
+```
+
+## Change the value of levels
+
+fct_recode(.f, ...) Manually change levels. Also fct_relabel() which
+obeys purrr::map syntax to apply a function or expression to each level.
+
+```{r}
+f <- factor(c("a","b","c"))
+fct_recode(f, v = "a", x = "b", z = "c")
+fct_relabel(f, ~ paste0("x", .x))
+```
+
+fct_anon(f, prefix = "") Anonymize levels with random integers.
+
+```{r}
+fct_anon(f)
+```
+
+fct_collapse(.f, ..., other_level = NULL) Collapse levels into manually
+defined groups.
+
+```{r}
+fct_collapse(f, x = c("a"))
+```
+
+fct_lump_min(f, min, w = NULL, other_level = "Other") Lumps together
+factors that appear fewer than min times. Also fct_lump_n(),
+fct_lump_prop(), and fct_lump_lowfreq(). fct_lump_min(f, min = 2)
+
+```{r}
+f2 <- factor(c("a","a","a","b","c"))
+fct_lump_min(f2, min = 2)
+```
+
+fct_other(f, keep, drop, other_level = "Other") Replace levels with
+"other."
+
+```{r}
+fct_other(f, keep = c("a", "b"))
+```
+
+## add or drop levels 
+
+fct_drop(f, only) Drop unused levels.
+
+```{r}
+f5 <- factor(c("a","b"),c("a","b","x"))
+f6 <- fct_drop(f5)
+f5 ; f6
+```
+
+fct_expand(f, ...) Add levels to a factor.
+
+```{r}
+fct_expand(f6, "x")
+```
+
+fct_explicit_na(f, na_level="(Missing)") Assigns a level to NAs to
+ensure they appear in plots, etc.
+
+```{r}
+
+fct_explicit_na(factor(c("a", "b", NA)))
+```
+
+## operations 
+
+sampling or indexing
+
+```{r}
+fac[2:4]
+fac[c(1, 3, 5)]
+fac[-c(2,4)]
+```
+
+sampling using operation
+
+```{r}
+fac < 1   #  ‘<’ not meaningful for factors
+```
+
+add values to factors
+
+```{r}
+fac <- factor(c("a","b","c"))
+fac[4] <- "a"
+fac
+fac[5] <- "Z"  # z not found in levels 
+fac <-fct_expand(fac,"Z")
+fac[5] <- "Z"
+fac
+```
+
+```{r}
+faLH <- gl(n = 2, k = 3, labels = c("low", "high"))
+faLH
+```
+
+grid or cross factors
+
+```{r}
+fac1 <- factor(c(1,2,3))
+fac2 <- factor(c(1,2,3))
+dfFactKombi <- expand.grid(fac1, fac2)
+dfFactKombi
+intersected <- interaction(fac1, fac2)
+intersected
+```
+
+```{r eval=TRUE}
+fact1 <- factor(rep(c(1:10),3))
+
+```
+
+## Examples
+
+###     Months orders  
+
+```{r}
+x2 <- c("Dec", "Apr", "Jam", "Mar")
+```
+
+```{r}
+sort(x2)
+
+```
+
+```{r}
+month_levels <- c(
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+)
+```
+
+```{r}
+y1 <- factor(x2, levels = month_levels)
+y1
+#> [1] Dec Apr Jan Mar
+#> Levels: Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+sort(y1)
+#> [1] Jan Mar Apr Dec
+#> Levels: Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+```
+
+### Ranking
+
+```{r}
+relig_summary <- gss_cat %>%
+  group_by(relig) %>%
+  summarise(
+    age = mean(age, na.rm = TRUE),
+    tvhours = mean(tvhours, na.rm = TRUE),
+    n = n()
+  )
+
+
+ggplot(relig_summary, aes(tvhours, relig)) + geom_point()
+```
+
+```{r}
+ggplot(relig_summary, aes(tvhours, fct_reorder(relig, tvhours))) +
+  geom_point()
+```
+
+## RECAP
+
+### 1-what is factors
+
+factors: R represent categorical data with factors . A factor is an
+integer vector with a **levels** attribute that stores a set of mappings
+between integers and categorical values ,when you view a factor , R
+display not the integers , burt the levels associated with them
+
+### 2- initialize  factors
+
+```{r}
+fac1 <-factor(c("SWE", "UK", "SWE", "IRE", "SWE", "THA", "IRE", "IND", "KOR", "IND"))
+fac2 <-factor(c("BRA", "VEN", "MEX", "BRA", "MEX", "ARG", "CHI", "ARG", "MEX"))
+fac1
+fac2
+ 
+```
+
+```{r}
+fac3 <-factor(c("BRA", "VEN", "MEX", "BRA", "MEX", "ARG", "CHI", "ARG", "MEX"),
+              levels = c("ARG" , "BRA" , "CHI", "MEX", "VEN"))
+fac3
+
+fac4 <-factor(c("BRA", "VEN", "MEX", "BRA", "MEX", "ARG", "CHI", "ARG", "MEX"),
+              levels = c("ARG" , "BRA" , "CHI"))
+fac4
+```
+
+::: {style="color:green ;"}
+when you don't give levels --> distinct levels ordered alphabet
+
+when we give all levels no problem
+
+when we give part of levels replace element that don't have levels with
+NA
+:::
+
+### 3- combine factors 
+
+```{r}
+combinfactor <- fct_c(fac1,fac2)
+fct_unify(list(fac1,fac2))
+fct_unify(list(fac1,fac2),levels = lvls_union(list(fac1,fac2)))
+```
+
+### 4-  levels & count of levels
+
+```{r}
+levels(combinfactor)
+nlevels(combinfactor)
+```
+
+### 5- indexing 
+
+```{r}
+fac1[1] # first element 
+fac2[1]
+fac1[length(fac1)]  # last element 
+fac2[length(fac2)]
+```
+
+### 6- inserting
+
+you can only insert values that found in levels (constrains),when you
+want to add element that
+
+don't have levels **first add level** than **add element**
+
+```{r}
+fac1[length(fac1)+1] <- "KOL"
+
+```
+
+```{r}
+fac1 <-fct_expand(fac1,"KOL")
+fac1[length(fac1)+1] <- "KOL"
+fac1
+```
+
+### 7- Change values of levels 
+
+```{r}
+levels(fac1)
+fac3 <-fct_relabel(fac1,~paste0(tolower(levels(fac1))))
+fac3
+# fac4 <-fct_recode(fac1,tolower(levels(fac1)))
+```
+
+### 8- drop levels
+
+you should remove all observation or records with these levels
+
+```{r}
+fac2
+fac2[fac2 == "BRA" ||fac2 == "MEX"] <- NA
+fct_drop(fac2)
+#fac3 <- fct_drop(fac2,c("BRA","MEX"))
+#fac3
+
+```
+
+### 9- order levels 
+
+```{r}
+fac1 <- factor(c("c1","c3","c2","c4","IRE"))
+vec <- c(1.3,1.5,1.4,1.8,1.45)
+#fac3 <- reorder(fac1 ,vec~fac1)
+fac3 <- fct_reorder(.f = fac1 , vec ,min)
+fac3
+ 
+```
+
+```{r}
+boxplot(Sepal.Width ~ Species, data = iris)
+boxplot(Sepal.Width ~ fct_reorder(Species, Sepal.Width, .desc = TRUE), data = iris)
+```
+
+### 10-  compare operation with ordered factors 
+
+```{r}
+
+fac3 <- ordered(fac3)
+ind <- fac3 < "IRE";
+fac3[ind]
+```
+
+
+

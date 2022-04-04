@@ -1,0 +1,30 @@
+---
+title: "Plotly_graphs using shiny"
+author: "Bakro"
+date: "17/11/2021"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## intro
+
+this app provide an easy UI to choose a variable and draw plotly graph for one variable and generate code
+
+if variable is factor provide pie chart else if varible is numeric provide you a histogram / boxplot or density in addition to code
+
+[link of app](https://z4ad3g-abdulmajid-bakro.shinyapps.io/plotly_graphs/)
+
+## histogram
+
+![](images/histogram.png){width="800"}
+
+## pie chart
+
+![](images/pie.png){width="800"}
+
+## code
+
+![](images/code.png){width="800"}

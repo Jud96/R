@@ -1,0 +1,780 @@
+---
+title: "final_project_Task_2"
+author: "Bakro"
+date: "11/27/2021"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE }
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Synnopsis
+
+The goal of the project is to build a model that can predict the next
+word given an input word/sentence fragment. This report examines the
+three sets of writing samples and performs some exploratory analysis on
+them. Some 1-gram (one word at a time) to 4-gram (grouping into 4 word
+phrases) models are briefly examined on the samples of the datasets. For
+the next step, a 1-gram to n-gram model using all the text datasets will
+be built to predict the next word given a phrase is entered.
+
+## summary of processing
+
+1-Download Data and zip files (see Appendix)
+
+2- access to files info (size,numberofwords,...) and save this info in
+table(see Appendix)
+
+3- sampling data(see Appendix)
+
+4- combine files together(see Appendix)
+
+5- cleaning data
+
+6- n-grams
+
+7- ploting data
+
+note : in steps that take long time to process or important data . i
+save file and load it again to save time (caching data)
+
+## libraries
+
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+library(tidytext) # text mining library that follows the tidy data principle
+library(here) # easy file referencing in project-oriented workflows
+library(tm) #A framework for text mining applications within R.
+library(wordcloud2)  # word cloud as html widgets
+library(tidyverse)
+library(feather) # A Fast On-Disk Format for data frames powered by Apache Arrow
+library(kableExtra)
+library(htmlwidgets)  # html widgets in R
+library(webshot) # take screenshots of web pages from R
+ Sys.setenv(JAVA_HOME='C:\\Program Files\\Java\\jre7') # for 64-bit version
+ Sys.setenv(JAVA_HOME='C:\\Program Files (x86)\\Java\\jre7') # for 32-bit version
+library(rJava)
+library(openNLP)
+library(qdap)
+library(RWeka)
+library(openNLP)
+library(R.utils)
+library(RColorBrewer)
+```
+
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+
+read_Text_File <- function(path) {
+    con <- file(path, "r")
+    text <- readLines(con, skipNul = T)
+    close(con)
+    return(text)
+}
+
+show_morefrequency <- function(tibble, top_num) {
+    tibble %>%
+        rename(ngram = colnames(tibble)[2]) %>%
+        count(ngram, sort = TRUE) %>%
+        slice(1:top_num) %>%
+        mutate(ngram = reorder(ngram, n)) %>%
+        ggplot(aes(n, ngram)) +
+        geom_col() +
+        labs(y = NULL)
+}
+
+wordcloud <- function(tibble, file_name, top_num=100) {
+  wordcloud <- tibble %>%
+    rename(ngram = colnames(tibble)[2]) %>%
+    count(ngram, sort = TRUE) %>%
+    slice(1:top_num) %>%
+    wordcloud2(size=0.7, color='random-dark', minRotation = 0, maxRotation = 0)
+  
+  saveWidget(wordcloud, "tmp.html", selfcontained = F) 
+  webshot("tmp.html", here("10_DataScienceCapstone/figs", file_name), delay = 5, vwidth = 1000, vheight = 800)
+  
+  unlink(here("10_DataScienceCapstone/report", "tmp_files"), recursive = TRUE)
+  unlink(here("10_DataScienceCapstone/report", "tmp.html"))
+}
+
+```
+
+## getting data and info
+
+see Appendix that code to download data and summarize info of files
+
+```{r}
+## here is saved info about files 
+repo_summary2 <- read.csv("data/repo_summary")
+repo_summary2
+```
+
+\#\#\#Data sampling
+
+sampling data using most data from news because of quality and range of
+words and save this files in sampled data folder, any way that depend on
+application
+
+### Combind text data
+
+With our sampled data, we can now read in the text files individually
+using a helper function readTxtFile which uses the readLines function.
+
+The text files are then combined together.
+
+## Checklist for cleaning data
+
+-   Removing stop words (common words to be filtered like is, am, are)
+
+-   Remove punctuation
+
+-   Remove numbers
+
+-   Remove bad words
+
+-   keep only ASCII characters
+
+```{r eval = FALSE}
+conprofane <- file("data/bad-words.txt", "r")
+profanity_vector <- VectorSource(readLines(conprofane))
+combined_txt <- read_Text_File("data/NLP/combined_text.txt")
+corpus <- VCorpus(VectorSource(combined_txt)) # main corpus with all sample files
+corpus <- tm_map(corpus, removeNumbers) 
+corpus <- tm_map(corpus, stripWhitespace) 
+corpus <- tm_map(corpus, tolower) 
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+corpus <- tm_map(corpus, removeWords, profanity_vector) 
+corpus <- gsub("http\\w+","", corpus)
+save(corpus, file="data/NLP/corpus.RData")
+```
+
+## n_grams
+
+In the fields of computational linguistics and probability, an n-gram
+(sometimes also called Q-gram) is a contiguous sequence of n items from
+a given sample of text or speech. The items can be phonemes, syllables,
+letters, words or base pairs according to the application. The n-grams
+typically are collected from a text or speech corpus. When the items are
+words, n-grams may also be called shingles
+
+```{r}
+load("data/NLP/corpus.RData") ## load clean data
+ngram_tb <- tibble(line = 1:(length(corpus[[1]])), text = corpus[[1]])
+```
+
+### Unigram
+
+```{r}
+unigram_tb <-  ngram_tb %>% 
+  unnest_tokens(word, text) %>% # turn our text file into individual words
+  anti_join(stop_words, by = "word") %>% # remove stop words
+  filter(!str_detect(word, "\\d+")) %>% # filter digits
+  filter(!str_detect(word,"[^\x01-\x7F]+"))%>% # only AScii characters
+  mutate_at("word", str_replace, "[[:punct:]]", "")   # remove punctuation 
+
+head(unigram_tb)
+```
+
+### Bigram
+
+```{r}
+bigram_tb <- ngram_tb %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+  mutate_at("bigram", str_replace, "[[:punct:]]", "") %>%
+  filter(!str_detect(bigram, "\\d+")) %>%
+    filter(!str_detect(bigram,"[^\x01-\x7F]+"))  %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+ 
+
+head(bigram_tb)
+```
+
+### Trigram
+
+```{r}
+trigram_tb <- ngram_tb %>%
+  unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
+  mutate_at("trigram", str_replace, "[[:punct:]]", "") %>%
+  filter(!str_detect(trigram, "\\d+")) %>%
+   filter(!str_detect(trigram,"[^\x01-\x7F]+"))  %>%
+  separate(trigram, c("word1", "word2", "word3"), sep = " ") 
+
+head(trigram_tb)
+```
+
+### Quadgram
+
+```{r}
+quadgram_tb <- ngram_tb %>%
+  unnest_tokens(quadgram, text, token = "ngrams", n = 4) %>%
+  mutate_at("quadgram", str_replace, "[[:punct:]]", "") %>%
+  filter(!str_detect(quadgram, "\\d+")) %>% 
+ filter(!str_detect(quadgram,"[^\x01-\x7F]+"))  %>%
+  separate(quadgram, c("word1", "word2", "word3", "word4"), sep = " ") 
+
+head(quadgram_tb)
+```
+
+### Save the ngrams with Feather
+
+```{r}
+
+if(!dir.exists(here("data/NLP/ngrams"))){
+  dir.create(here("data/NLP/ngrams"))
+}
+
+# save ngrams with feather
+ngrams_path <- here('data/NLP/ngrams')
+write_feather(unigram_tb, here(ngrams_path, "unigrams.feather"))
+write_feather(bigram_tb, here(ngrams_path, "bigrams.feather"))
+write_feather(trigram_tb, here(ngrams_path, "trigrams.feather"))
+write_feather(quadgram_tb, here(ngrams_path, "quadgram.feather"))
+```
+
+## Exploratory Data Analysis
+
+To visualize the data, helper functions plot_top and wordcloud_plot were
+created to plot the top_n words and word cloud
+
+### Unigrams
+
+```{r}
+
+unigram_tb %>% 
+  show_morefrequency(15) 
+ ggsave(here("figs/unigram_bar.png"), width = 12,  height = 8)
+ 
+# webshot::install_phantomjs()
+ # C:\Users\mjd\AppData\Roaming\PhantomJS
+file_name <- "unigram_wc.png"
+wordcloud(unigram_tb, file_name, 150)
+knitr::include_graphics(path.expand(here("figs", file_name)))
+
+
+```
+
+### Bigrams
+
+```{r}
+bigram_tb <- bigram_tb %>% 
+  unite(bigram, word1, word2, sep=" ") 
+
+bigram_tb %>% 
+  show_morefrequency(15)
+ggsave(here("figs/bigram_bar.png"), width = 12,  height = 8)
+
+file_name <- "bigram_wc.png"
+wordcloud(bigram_tb, file_name, 100)
+knitr::include_graphics(path.expand(here("figs", file_name)))
+```
+
+### Trigrams
+
+```{r}
+trigram_tb <- trigram_tb %>% 
+  unite(bigram, word1, word2, word3, sep=" ") 
+
+trigram_tb %>% 
+  show_morefrequency(15)
+ggsave(here("figs/trigram_bar.png"), width = 12,  height = 8)
+
+file_name <- "trigram_wc.png"
+wordcloud(trigram_tb, file_name, 100)
+knitr::include_graphics(path.expand(here("figs", file_name)))
+```
+
+## Document Term matrix
+
+For computers to understand our data, we need to convert it into a
+machine understandable form. In natural language processing (NLP), one
+of the techniques is called TF-IDF, which stands for term frequency,
+inverse document frequency.
+
+TF-IDF will convert text documents in to a form where each sentence is a
+document and words in the sentence are tokens. The result is something
+called a DocumentTermMatrix (DTM), or TermDocumentMatrix (TDM),
+depending on whether the documents correspond to row or column. What
+this does is essentially provide measure to weigh the importance of
+different words.
+
+```{r}
+my_dtm <- ngram_tb %>%
+  unnest_tokens(word, text) %>% 
+  count(line, word) %>% 
+  cast_dtm(line, word, n)
+my_dtm
+```
+
+## Plan for NLP model and Shiny app
+
+The analysis helped me understand more about what kind of information my
+sampled data captures. With a dtm ready, the next step is to get more
+data for testing and validation, then build the model. After that, I
+will start building the shiny app for users to use the data product.
+Throughout the process, I will by studying more from the book Tidy text
+mining and research suitable algorithms to use.
+
+The steps are summarized below:
+
+Prepare train test and validation dataset
+
+I will split my current dtm into a train and test set, then randomly
+sample more data to create my validation dataset. Train and evaluate
+text prediction model
+
+I will be training multiple suitable models on the training set, then
+evaluate their performance on the test set. The best performing model
+will be chosen, and applied on the validation set in the end. Build
+shiny app
+
+After finishing the model, I will apply it to the shiny app, Users will
+then be able to type up words in a text box, and the model will generate
+predictions from the words. Slide deck
+
+With a working data product, the last step is to build a slide deck
+using R presentations and present to users how to use the product.
+
+## Appendix
+
+### download data
+
+```{r  eval=FALSE}
+
+download_data  <- function(locale, outdir) {
+    here::i_am("report/milestone-report.Rmd")
+    data_path <- here("data")
+    
+    if (dir.exists(here(data_path, outdir))) {
+        print("directory already exists")
+    } else {
+        options(timeout = 200) # to prevent timeout error
+        
+        # download data into temp file
+        temp <- tempfile()
+        download.file(url = "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip",
+                      temp)
+        
+        # unzip tempfile and remove
+        unzip(zipfile = temp, exdir = data_path)
+        unlink(temp)
+    }
+    
+    # save directory of extracted zip file
+    final_path <- here(data_path, "final")
+    
+    # create outdir directory
+    dir.create(here(data_path, outdir))
+    
+    # grabs files with en_US
+    old_names <-
+        list.files(
+            path = final_path,
+            pattern = paste0("^", locale),
+            recursive = TRUE
+        )
+    
+    # provide new names
+    new_names <- c("blogs.txt", "news.txt", "twitter.txt")
+    
+    # rename and remove old ones.
+    file.rename(from = file.path(final_path, old_names),
+                to = file.path(here(data_path, outdir), new_names))
+    
+    # remove final folder from zip file
+  unlink(here(data_path, "final"), recursive = TRUE)
+}
+```
+
+### file info
+
+```{r eval=FALSE}
+
+blogs_file   <- "./data/final/en_US/en_US.blogs.txt"
+news_file    <- "./data/final/en_US/en_US.news.txt"
+twitter_file <- "./data/final/en_US/en_US.twitter.txt"
+
+# create txt file
+read_Text_File <- function(path) {
+    con <- file(path, "r")
+    text <- readLines(con, skipNul = T)
+    close(con)
+    return(text)
+}
+
+
+blogs <- read_Text_File(blogs_file)
+news <- read_Text_File(news_file)
+twitter <- read_Text_File(twitter_file)
+
+blogs_size <- file.size(blogs_file)/(1024*1024)
+news_size   <- file.size(news_file)/(1024*1024)
+twitter_size <- file.size(twitter_file)/(1024*1024)
+blogs_lines   <- length(blogs)
+news_lines    <- length(news)
+twitter_lines <- length(twitter)
+
+blogs_nchar_sum   <- sum(nchar(blogs))
+news_nchar_sum    <- sum(nchar(news))
+twitter_nchar_sum <- sum(nchar(twitter))
+
+
+blogs_words <- sum(str_count(blogs,'\\w+'))
+ 
+news_words  <-  sum(str_count(news,'\\w+'))
+twitter_words <- sum( str_count(twitter,'\\w+'))
+
+repo_summary <- data.frame(names = c("blogs", "news", "twitter"),
+                           size_Mb  = c(blogs_size, news_size, twitter_size),
+                           lines = c(blogs_lines, news_lines, twitter_lines),
+                           chars =  c(blogs_nchar_sum, news_nchar_sum, twitter_nchar_sum),
+                           words = c(blogs_words, news_words, twitter_words))
+
+write.csv(repo_summary,file = "data/repo_summary")
+repo_summary %>%
+  kbl() %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+```
+
+### helping methods
+
+```{r message=FALSE,warning=FALSE}
+
+read_Text_File <- function(path) {
+    con <- file(path, "r")
+    text <- readLines(con, skipNul = T)
+    close(con)
+    return(text)
+}
+
+show_morefrequency <- function(tibble, top_num) {
+    tibble %>%
+        rename(ngram = colnames(tibble)[2]) %>%
+        count(ngram, sort = TRUE) %>%
+        slice(1:top_num) %>%
+        mutate(ngram = reorder(ngram, n)) %>%
+        ggplot(aes(n, ngram)) +
+        geom_col() +
+        labs(y = NULL)
+}
+
+wordcloud <- function(tibble, file_name, top_num=100) {
+  wordcloud <- tibble %>%
+    rename(ngram = colnames(tibble)[2]) %>%
+    count(ngram, sort = TRUE) %>%
+    slice(1:top_num) %>%
+    wordcloud2(size=0.7, color='random-dark', minRotation = 0, maxRotation = 0)
+  
+  saveWidget(wordcloud, "tmp.html", selfcontained = F) 
+  webshot("tmp.html", here("10_DataScienceCapstone/figs", file_name), delay = 5, vwidth = 1000, vheight = 800)
+  
+  unlink(here("10_DataScienceCapstone/report", "tmp_files"), recursive = TRUE)
+  unlink(here("10_DataScienceCapstone/report", "tmp.html"))
+}
+
+```
+
+### sampling data
+
+```{r eval = FALSE}
+
+set.seed(2021)
+blogs_file   <- "./data/final/en_US/en_US.blogs.txt"
+news_file    <- "./data/final/en_US/en_US.news.txt"
+twitter_file <- "./data/final/en_US/en_US.twitter.txt"
+# prob is probability of sampling
+sample_data("blogs", blogs_file, prob = 0.05)
+sample_data("news", news_file, prob = 0.2)
+sample_data("twitter", twitter_file, prob = 0.01)
+
+sample_path <- here("data/sampled")
+list.files(sample_path)
+
+sample_data <- function(filename, filepath, prob) {
+    set.seed(2021)
+    con <- file(filepath, "r")
+    file <- readLines(con, skipNul = T)
+    len <- length(file)
+    sub_file <- file[rbinom(n = len, size = 1, prob = prob) == 1]
+    close(con)
+    
+    sample_path <- here("data/sampled")
+    if (!dir.exists(sample_path)) {
+        dir.create(sample_path)
+    }
+    
+    new_file_path <- paste0(sample_path, "/sub_", filename)
+    if (!file.exists(new_file_path)) {
+        out <- file(new_file_path, "w")
+        writeLines(sub_file, con = out)
+        close(out)
+    }
+}
+```
+
+### combine data
+
+```{r eval=FALSE}
+sample_path <- here("data/sampled")
+list.files(sample_path)
+sampled_file_names <- list.files(sample_path)
+
+blogs_txt <- read_Text_File(here(sample_path, sampled_file_names[1]))
+news_txt <- read_Text_File(here(sample_path, sampled_file_names[2]))
+twitter_txt <- read_Text_File(here(sample_path, sampled_file_names[3]))
+
+combined_txt <- paste(c(twitter_txt, news_txt, blogs_txt))
+combined_txt <- sent_detect(combined_txt, language = "en", model = NULL) # splitting of text paragraphs into sentences.
+    new_file_path <- here("data/NLP/combined_text.txt")
+    if (!file.exists(new_file_path)) {
+        out <- file(new_file_path, "w")
+        writeLines(combined_txt, con = out)
+        close(out)
+    }
+# clear from memory
+rm("twitter_txt", "news_txt", "blogs_txt")
+```
+
+## predictor models
+
+<https://rpubs.com/Nov05/461099>
+
+```{r message=FALSE ,warning=FALSE}
+library(here)
+library(tidyverse)
+library(feather)
+library(multidplyr)
+library(parallel)
+library(tidytext)
+```
+
+```{r}
+ngrams_path <- here('data/NLP/ngrams/')
+
+bigrams <- read_feather(here(ngrams_path, "bigrams.feather")) 
+trigrams <- read_feather(here(ngrams_path, "trigrams.feather"))
+quadgrams  <- read_feather(here(ngrams_path, "quadgram.feather"))
+
+```
+
+## **Parallel Processing**
+
+```{r}
+cl <- detectCores()
+cl
+cluster <- new_cluster(cl)
+cluster
+cluster_library(cluster, "tidyverse") # cluster libraries 
+
+## Partition dataset for parallel processing
+
+group <- rep(1:cl, length.out = nrow(bigrams))
+bigrams <- bind_cols(tibble(group), bigrams)
+head(bigrams, 10)
+
+
+bigrams <- bigrams %>%
+    group_by(group) %>% 
+    partition(cluster = cluster)
+bigrams
+```
+
+```{r}
+matchBigram <- function(input1, n = 5) {
+    prediction <- bigrams %>%
+        filter(word1 == input1) %>%
+        collect() %>%
+        mutate(freq = str_count(word2)) %>%
+        arrange(desc(freq)) %>% 
+        pull(word2)
+    
+    prediction[1:n]
+}
+
+matchBigram('bad')
+```
+
+## **Trigram**
+
+```{r}
+group <- rep(1:cl, length.out = nrow(trigrams))
+trigrams <- bind_cols(tibble(group), trigrams)
+
+trigrams <- trigrams %>%
+    group_by(group) %>% 
+    partition(cluster = cluster)
+trigrams
+
+
+```
+
+```{r}
+matchTrigram <- function(input1, input2, n = 5) {
+    
+    # match 1st and 2nd word in trigram, and return third word
+    prediction <- trigrams %>%
+        filter(word1 == input1, word2 == input2) %>%
+        collect() %>%
+        mutate(freq = str_count(word3)) %>%
+        arrange(desc(freq)) %>%
+        pull(word3)
+    
+    # if no matches, match 1st word in trigram, and return 2nd word
+    if (length(prediction) == 0) {
+        prediction <- trigrams %>%
+            filter(word1 == input2) %>%
+            collect() %>%
+            mutate(freq = str_count(word2)) %>%
+            arrange(desc(freq)) %>%
+            pull(word2)
+        
+        # if no matches, match 2nd word in trigram, and return 3rd word
+        if (length(prediction) == 0) {
+            prediction <- trigrams %>%
+                filter(word2 == input2) %>%
+                collect() %>%
+                mutate(freq = str_count(word3)) %>%
+                arrange(desc(freq)) %>%
+                pull(word3)
+            
+            # all else fails, find match in bigram
+            if (length(prediction) == 0) {
+                prediction <- matchBigram(input2, n)
+            }
+        }
+    }
+    
+    prediction[1:n]
+}
+
+matchTrigram('I', 'love')
+```
+
+## **Quadgram**
+
+```{r}
+group <- rep(1:cl, length.out = nrow(quadgrams))
+quadgrams <- bind_cols(tibble(group), quadgrams)
+
+quadgrams <- quadgrams %>%
+    group_by(group) %>% 
+    partition(cluster = cluster)
+quadgrams
+```
+
+```{r}
+matchQuadgram <- function(input1, input2, input3, n=5) {
+    
+    # match 1st, 2nd, 3rd word in quadgram, and return 4th word
+    prediction <- quadgrams %>%
+        filter(word1 == input1, word2 == input2, word3 == input3) %>%
+        collect() %>%
+        mutate(freq = str_count(word4)) %>%
+        arrange(desc(freq)) %>%
+        pull(word4)
+    
+    # match 1st and 2nd, return 3rd word
+    if (length(prediction) == 0) {
+        prediction <- quadgrams %>%
+            filter(word1 == input2, word2 == input3) %>%
+            collect() %>%
+            mutate(freq = str_count(word3)) %>%
+            arrange(desc(freq)) %>%
+            pull(word3)
+        
+        # match 2nd and 3rd, return 4th
+        if (length(prediction) == 0) {
+            prediction <- quadgrams %>%
+                filter(word2 == input2, word3 == input3) %>%
+                collect() %>%
+                mutate(freq = str_count(word4)) %>%
+                arrange(desc(freq)) %>%
+                pull(word4)
+            
+            # if no matches, find match in trigrams
+            if (length(prediction) == 0) {
+                prediction <- matchTrigram(input2, input3, n)
+            }
+        }
+    }
+    
+    prediction[1:n]
+}
+
+matchQuadgram('my', 'favourite', 'food')
+```
+
+clean data
+
+```{r}
+
+clean_input <- function(input) {
+    
+    input <- tibble(line = 1:(length(input)), text = input) %>%
+        unnest_tokens(word, text) %>%
+         
+        filter(!str_detect(word, "\\d+")) %>%
+        mutate_at("word", str_replace, "[[:punct:]]", "") %>% # remove punctuation
+        pull(word)
+    
+    input
+}
+
+clean_input("I h8 this crap SO much!!!")
+```
+
+```{r}
+next_word <- function(input, n=10) {
+    input <- clean_input(input)
+    wordCount <- length(input)
+    
+    if (wordCount == 0) {
+        pred <- "Please enter a word"
+    }
+    
+    if (wordCount == 1) {
+        pred <- matchBigram(input[1], n)
+    }
+    
+    if (wordCount == 2) {
+        pred <- matchTrigram(input[1], input[2], n)
+    }
+    
+    if (wordCount == 3) {
+        pred <- matchQuadgram(input[1], input[2], input[3], n)
+    }
+    
+    if (wordCount > 3) {
+        # match with last three words in input
+        input <- input[(wordCount - 2):wordCount]
+        pred <- matchQuadgram(input[1], input[2], input[3], n)
+    }
+    
+    if(NA %in% pred) {
+        return("No predictions available :(")
+    }
+    else {
+        return(pred)
+    }
+}
+txt <- "The guy in front of me just bought a pound of bacon, a bouquet, and a case of"
+next_word(txt)
+
+```
+
+```{r}
+next_word("mean the")
+
+head()
+```

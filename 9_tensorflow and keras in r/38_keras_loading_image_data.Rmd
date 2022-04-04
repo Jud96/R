@@ -1,0 +1,147 @@
+---
+title: "38_keras_loading_image_data"
+author: "Bakro"
+date: "1/4/2022"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading image data
+
+```{r}
+library(keras)
+library(tfdatasets)
+library(tensorflow)
+library(reticulate)
+use_condaenv("ML_workshop")
+use_python(Sys.getenv("CONDA_PERFIX"))
+# data_dir <- get_file(
+#   origin = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz",
+#   fname = "flower_photos.tgz",
+#   extract = TRUE
+# )
+# 
+# 
+# 
+# con = gzfile(path.expand(paste0(data_dir,".tgz")), "rb")
+# untar(con)  ## check contents
+# data_dir <- file.path(dirname(data_dir), "flower_photos")
+data_dir <- "C:\\Users\\mjd\\Documents\\R\\final\\flower_photos"
+images <- list.files(data_dir, pattern = ".jpg", recursive = TRUE)
+length(images)
+```
+
+
+
+```{r}
+classes <- list.dirs(data_dir, full.names = FALSE, recursive = FALSE)
+classes
+```
+
+### Load using tfdatasets
+
+```{r warning=FALSE}
+
+# To load the files as a TensorFlow Dataset first create a dataset of the file paths:
+
+list_ds <- file_list_dataset(file_pattern = paste0(data_dir, "/*/*"))
+# list_ds %>% reticulate::as_iterator() %>% reticulate::iter_next()
+
+```
+
+```{r}
+# Write a short pure-tensorflow function that converts a file paths to an (image_data, label) pair:
+
+get_label <- function(file_path) {
+  parts <- tf$strings$split(file_path, "/")
+  parts[-2] %>% 
+    tf$equal(classes) %>% 
+    tf$cast(dtype = tf$float32)
+}
+
+decode_img <- function(file_path, height = 224, width = 224) {
+  
+  size <- as.integer(c(height, width))
+  
+  file_path %>% 
+    tf$io$read_file() %>% 
+    tf$image$decode_jpeg(channels = 3) %>% 
+    tf$image$convert_image_dtype(dtype = tf$float32) %>% 
+    tf$image$resize(size = size)
+}
+
+preprocess_path <- function(file_path) {
+  list(
+    decode_img(file_path),
+    get_label(file_path)
+  )
+}
+```
+
+```{r warning=FALSE}
+# Use dataset_map to create a dataset of image, label pairs:
+
+# num_parallel_calls are going to be autotuned
+
+labeled_ds <- list_ds %>% 
+  dataset_map(preprocess_path, num_parallel_calls = tf$data$experimental$AUTOTUNE)
+
+
+# Let’s see what the output looks like:
+
+labeled_ds %>%
+  reticulate::as_iterator() %>%
+  reticulate::iter_next()
+```
+
+### Training a model
+
+```{r}
+prepare <- function(ds, batch_size, shuffle_buffer_size) {
+  
+  if (shuffle_buffer_size > 0)
+    ds <- ds %>% dataset_shuffle(shuffle_buffer_size)
+  
+  ds %>% 
+    dataset_batch(batch_size) %>% 
+    # `prefetch` lets the dataset fetch batches in the background while the model
+    # is training.
+    dataset_prefetch(buffer_size = tf$data$experimental$AUTOTUNE)
+}
+
+t = prepare(labeled_ds, batch_size = 32, shuffle_buffer_size = 1000)
+model <- keras_model_sequential() %>% 
+  layer_flatten() %>% 
+  layer_dense(units = 128, activation = "relu") %>% 
+  layer_dense(units = 128, activation = "relu") %>% 
+  layer_dense(units = 5, activation = "softmax")
+
+model %>% 
+  compile(
+    loss = "categorical_crossentropy",
+    optimizer = "adam",
+    metrics = "accuracy"
+  )
+```
+
+```{r}
+# Note We are fitting this model as an example of how to the pipeline built with Keras. In real use cases you should always use validation datasets in order to verify your model performance.
+
+model %>% 
+  fit(
+    prepare(labeled_ds, batch_size = 32, shuffle_buffer_size = 1000),
+    epochs = 5,
+    verbose = 2
+  )
+```

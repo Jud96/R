@@ -1,0 +1,626 @@
+---
+title: "programming"
+author: "Abdulmajid Bakro"
+date: "10/5/2021"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(sqldf)
+```
+
+# Conditions
+
+## variable
+
+```{r}
+num1 <- 13 
+num2 <- 20
+if (num1 > num2)
+{rint("number1 is bigger than number2")
+  } else 
+{ print("number1 is smaller than number2")}
+
+
+x <- 0
+if (x < 0) {
+print("Negative number")
+} else if (x > 0) {
+print("Positive number")
+} else
+print("Zero")
+```
+
+## vector
+
+```{r}
+vec1  <- c(1.1, 2.2, 3.3)
+vec2 <- c(1.1, 2.2, 3.5)
+if (isTRUE(all.equal(vec1, vec2))) {
+   cat("same vector \n")
+}
+
+```
+
+-   isTRUE(), isFALSE()
+
+-   is.logical(), is.integer(), is.numeric(), is.double(),
+    is.character(),
+
+-   is.vector(), is.factor(), is.matirx(), is.array(), is.data.frame(),
+    is.list()
+
+-   is.na(), is.name(), is.finite(), is.infinite()
+
+-   is.expression,
+
+-   is.function().
+
+## switch()-Statement
+
+```{r}
+
+switch(1,"red","green","blue")
+
+vnVal <- 2                          
+switch(vnVal,    # muss return position                   
+       print("Val is 1"),           
+       print("Val is 2"),          
+       print("Val is 3"))
+```
+
+# LOOPS
+
+you can do a work for n times for example you want to draw all graphs
+(hist for contentious ,pie for categorical ) that save time and you can
+use that for any data set so that you can save it as function!!
+
+## For
+
+```{r}
+sum <- 0                                 
+for(ind in 1:5) {
+    if(ind == 3) next  # skip this value from sum 
+  sum <- sum + ind                 
+                           
+  cat("iterrate ", ind, "\n",                
+      "cum_sum ", sum, "\n")  
+} 
+```
+
+## loops and vectors
+
+difference between them in performance !!
+
+```{r}
+vec1 <- c(1:1000000)   #  initialize is easy !!
+vec2 <- rep(c(1:1000),1000)
+
+start <- proc.time()
+ t<- vec1*vec2
+end <- proc.time()
+print(end - start)
+
+
+
+start <- proc.time()
+v <- NULL ;
+for (ind in 1:1000000) {
+  v[ind] = vec1[ind]*vec2[ind]
+}
+end <- proc.time()
+print(end - start)
+```
+
+## while
+
+```{r}
+ind <- 1          
+arr <- NULL   
+
+while(ind <= 10) {                     
+   arr[ind] <- 2 * ind + 1 
+    if(arr[ind] > 20) break
+   ind <- ind + 1  # iterate or var condition 
+} 
+arr
+```
+
+## repeat
+
+```{r}
+x <- 1
+repeat{
+  
+   if (x> 10) break ;
+   x <- x + 1 
+  
+}
+```
+
+## apply
+
+-   less typing
+
+-   readable code
+
+-   not faster than for loop
+
+apply(X, MARGIN, FUN, ...)
+
+-   X: **Input-Array**
+
+-   MARGIN: 1 - rows, 2 - cols, c(1, 2) - rows & cols
+
+-   FUN: any standard function or your function
+
+```{r}
+mat <- matrix(c(1, 2, 3, 4, 5, 6, 7, 8, 9), nrow = 3, ncol =3)
+mat
+rMeans <- NULL; cMeans <- NULL
+for(vn in 1:nrow(mat)) { 
+   rMeans[vn] <- mean(mat[vn,]) 
+}
+rMeans
+
+for(vn in 1:ncol(mat)) { 
+   cMeans[vn] <- mean(mat[,vn])
+} 
+cMeans
+
+```
+
+```{r}
+rMeans <- apply(mat, 1, mean)  # data,when want row (1) ,function  
+rMeans
+
+cMeans <- apply(mat, 2, mean) # data,when want col (2) ,function 
+cMeans
+cMeans <- apply(mat, c(1,2), mean) # rows,cols
+cMeans
+```
+
+```{r}
+x <- matrix(rnorm(200),20,10)
+apply(x,1,quantile,props = c(0.25,0.75))
+```
+
+## tapply
+
+vecors , matrix,...
+
+```{r}
+
+
+tapply(diamonds$price, diamonds$cut, mean)
+tapply(diamonds$price, diamonds$cut, range)
+```
+
+## lapply & sapply
+
+**apply on list**
+
+```{r}
+mylist <- list(vnEins = seq(1, 10, by = 0.3), 
+              vnZwei = seq(100, 150, by = 2), 
+              vnDrei = seq(-10, -5, by = 1), 
+              vnVier = seq(30, 45, by = 1.3))
+mylist
+
+lapply(mylist, mean)
+sapply(mylist, mean)
+```
+
+## mapply
+
+**apply on list / apply for multiple lists parallel over set of
+argument**
+
+```{r}
+mapply(rep,1:4,4:1)
+#noise(1,1,2)
+#mapply(plot,1:5,1:5,2)
+# noise(1,1,2) ,noise(2,2,2)...noise(5,5,2)
+
+```
+
+## split
+
+x: vector,dataframe
+
+f: factor
+
+drop : drop factor null group
+
+```{r}
+x <- c(rnorm(10),runif(10),rnorm(10))
+f <- gl(3,10)
+split(x,f)
+```
+
+# Function
+
+when you write summary (data) you show info about data
+
+Q : what you will do if this function not found ?
+
+-   you have used a lot of function that save a lot of time
+
+-   (divide and conquer ) big to small
+
+-   reusable functions over and over
+
+as we will see in explore function
+
+```{r}
+# function that sum only number and remove strings with show warning 
+## if you have multi variable you can use vector or list 
+sumnumbers <- function(a,b)
+{
+  result <- a + b 
+  result
+  
+}
+
+sumnumbers(3,4)
+#summnumbers(3,4,5)  error
+#sumnumbers(3,"b")   error
+
+```
+
+**on.exit ()**: Command sequence that is always used when the function
+is exited is performed **warning ()**: Output of a self-created warning
+**stop ():** Abort of the function with self-created stop message
+**stopifnot ():** Terminate the function if a condition is met! **try
+():** handling of errors for a statement **tryCatch ():** Handling of
+errors, warnings, messages, aborts
+
+## Function Arguments And Their Default
+
+```{r}
+MyThirdFun <- function(n, y = 2) 
+{
+  # Compute the power of n to the y
+  n^y  
+}
+
+# Specify both args
+MyThirdFun(2,3) 
+
+# Just specify the first arg
+MyThirdFun(2)
+```
+
+```{r}
+MyThirdFun <- function(n, y = seq(0.05, 0.1, by = 0.01))
+{
+  # Compute the power of `n` to the `y`
+  n^y  
+}
+
+# As before, specify both args
+MyThirdFun(2,3)
+
+# Compute all possible according to given default
+MyThirdFun(2)  
+
+# Specify no arguments: error!
+# MyThirdFun()   
+```
+
+## missing
+
+```{r}
+# Equivalent alternative:
+MyFourthFun <- function(n, y)  
+ { if(missing(y))
+   {
+    y <- seq(0.05, 0.1, by = 0.01)
+ }
+ return(n^y)
+}
+
+MyFourthFun(2,3)
+
+# Compute all possible according to given default
+MyFourthFun(2)  
+
+# Specify no argument: error!
+# MyFourthFun() 
+```
+
+```{r}
+MyFourthFun <- function(n, y)  
+{  
+  # Uncomment `print()` calls to check passed values
+  # print(n)
+  # print(y)
+  if(missing(n)) n=2;
+  if(missing(y)) y=0.05;
+  if(!y %in% seq(0.05, 1, by = 0.02)) print("value must be <= 1)")
+  else return(n^y)
+}
+
+# Calculation will be carried out
+MyFourthFun(2,0.07)
+
+# Prints an error, `y` is not in the allowed list 
+MyFourthFun(2,3)
+
+# Use `y` default
+MyFourthFun(2)   
+
+# No arguments: both `n` and `y` defaults are used
+MyFourthFun()     
+```
+
+## the "..." Argument
+
+```{r}
+args(paste)
+args(cat)
+
+paste("a" ,"b",sep = ":")
+paste("a" ,"b",se = ":")
+```
+
+## Scoping Rules - Symbol Binding
+
+```{r}
+search()  # search for fun depend on this order
+# when you use function take local but not in sub functions  
+y <- 10
+f<- function(x){
+      y <- 2
+      y^2 + g(x)
+}
+g <- function(x){
+      x*y
+}
+
+f(3)
+# x = 3 y = 2    2
+```
+
+trycatch or if to predict code (when use try catch )
+
+```{r}
+div <-
+  function(a, b) {
+    objRes <- tryCatch(
+      { 
+        a/b
+      },
+      error = function(e) {paste("error: ", e)},
+      warning = function(w) {paste("Warnung : ", w)}, 
+      finally = { cat("finally \n") }
+    )
+    cat("result: ", objRes, "\n")
+    return(objRes)
+  }
+t <- div(1,0)
+t
+```
+
+# PIPES
+it sequence of instruction that implement by their order without any 
+saving
+***remember to add this to dplyr***
+
+for different groups what is mean of attentation and Dv for people with 
+iq between 90 and 110
+
+```{r}
+load(url("http://dwoll.de/rKompakt/dat.Rdata"))
+
+str(datW)
+
+datW_MW2 <- 
+   datW %>% 
+   dplyr::group_by(group) %>%
+   dplyr::select(group, iq, attention, DV) %>%
+   dplyr::filter((iq >= 90) & (iq <= 110)) %>%
+   dplyr::summarise(att_m = mean(attention, na.rm = TRUE), 
+                    dv_m = mean(DV, na.rm = TRUE))
+```
+
+using selection
+
+```{r}
+# think group a key word not variable 
+ sqldf("select avg(DV),avg(attention)  from datW where iq between 90 and 110 group by hair")
+```
+
+## pipes vs sqldf
+
+```{r}
+start <- proc.time()
+#datW3 <- rename(datW ,group = group1)
+# think group a key word not variable 
+ sqldf("select avg(DV),avg(attention)  from datW where iq between 90 and 110 group by hair")
+end <- proc.time()
+print(end - start)
+
+
+print("--------------------------------")
+
+start <- proc.time()
+
+ datW %>% 
+   dplyr::group_by(hair) %>%
+   dplyr::select(hair, iq, attention, DV) %>%
+   dplyr::filter((iq >= 90) & (iq <= 110)) %>%
+   dplyr::summarise(att_m = mean(attention, na.rm = TRUE), 
+                    dv_m = mean(DV, na.rm = TRUE))
+end <- proc.time()
+print(end - start)
+```
+
+# Debugging
+
+message/error/warning/logical error
+
+```{r}
+log(-1)  # warning
+```
+
+```{r}
+printmessage <- function(x){
+  if(x<0)
+    print("neg")
+  else
+    print("pos")
+  invisible(x)
+}
+printmessage(1)
+#printmessage(NA)
+```
+
+```{r}
+printmessage2 <- function(x){
+  if(is.na(x))
+    print("not available")
+  else if(x<0)
+    print("neg")
+  else
+    print("pos")
+  invisible(x)
+}
+printmessage2(1)
+printmessage2(NA)
+```
+
+```{r}
+sum(c(1,2,3,NA))
+sum(c(1,2,3,NA),na.rm = TRUE) # safe way
+```
+
+answer questions
+
+-   what was your input ? how did you call the function?
+
+-   what were you excepting? output,messages,other results?
+
+-   what did you get?
+
+-   how does what you get differ from what you were excepting ?
+
+-   were you expectations correct in the first place ?
+
+-   can you reproduce the problem (exactly)?
+
+    ## Tools
+
+    -   ***traceback*** : print out function call stack after an error
+        occurs ,does nothing if there's no error
+
+    -   ***debug : flags a function for debug mode which allow you to
+        step through execution of a function se line at a time***
+
+    -   browser : suspends execution of function wherever it is called
+        and puts the funcion in debug mode
+
+    -   trace : allows you to insert debugging code into a function a
+        specific places
+
+    -   recover : allows you to modify error behavior so that you can
+        browse the function call stack
+        
+```{r}
+    
+    # mean(gx)
+    # traceback()
+    # 
+    # lm(y~x)
+    # traceback()
+ ```
+
+
+
+
+
+## simulation
+
+rnorm(),dnorm(),pnorm(),rpois()
+
+r : random number
+
+d : density
+
+p:cumulative distribution
+
+q : quantile function
+
+```{r}
+rnorm(10) # mean =0 ,sd =1
+rnorm(10,mean = 20, sd = 2) -> x# mean =0 ,sd =1
+summary(x)
+set.seed(1)
+rnorm(5)
+
+# qnorm(10,lower.tail = TRUE,log.p = FALSE)
+# pnorm(10,lower.tail = TRUE,log.p = FALSE)
+# dnorm(10,log = FALSE)
+```
+
+```{r}
+rpois(10,5) -> x
+summary(x)
+
+ppois(2,2)  # prop[x <=2] 0.6766764
+ppois(4,2)  # prop[x <=4] 0.947347
+
+
+```
+
+## Simulating a Linear Model
+
+```{r}
+set.seed(3)
+x <- rnorm(100)
+e <- rnorm(100)
+y <- -0.5 + 2*x +e
+plot(x,y)
+```
+
+## random sampling
+
+```{r}
+sample(1:10)
+sample(1:10,6)
+
+samples <- sample(3, size=1000, replace=TRUE, prob=c(.60,.20,.20)) # sampling data to groups 
+train <- diamonds[which(samples == 1),c(1,5,6)] # filtering train 0.6 row ,selected cols
+test <- diamonds[which(samples == 2), ]
+valid <- diamonds[which(samples == 3), ]
+head(train)
+```
+
+## profiling
+
+-   how many time spend in different parts of programm
+
+-   optimize code
+
+-   profermance analyse or profiling
+
+-   system.time()
+
+elapsed time
+
+paralle processing (threads)
+
+```{r}
+Rprof()
+```
+
+link your project to github using git 
+

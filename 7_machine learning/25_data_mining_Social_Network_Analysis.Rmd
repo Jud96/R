@@ -1,0 +1,131 @@
+---
+title: "25_data_mining_Social_Network_Analysis"
+author: "Bakro"
+date: "1/2/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Social Network Analysis  
+
+```{r}
+library(igraph)
+# nodes
+nodes <- data.frame(
+name = c("Tom","Ben","Bob","John","Mary","Alice","Wendy","David"),
+gender = c("M", "M", "M", "M", "F", "F", "F", "M"),
+age = c( 16, 30, 42, 29, 26, 32, 18, 22)
+)
+# relations
+edges <- data.frame(
+from = c("Tom", "Ben", "Bob", "Mary", "Alice", "Wendy", "Wendy"),
+to = c("John", "John", "John", "John","Mary", "Mary", "David")
+)
+# build a graph object
+g <- graph.data.frame(edges, directed=F, vertices=nodes)
+
+layout1 <- g %>% layout_nicely() ## save layout for reuse
+g %>% plot(vertex.size = 30, layout = layout1)
+
+## use blue for male and pink for female
+colors <- ifelse(V(g)$gender=="M", "skyblue", "pink")
+g %>% plot(vertex.size=30, vertex.color=colors, layout=layout1)
+```
+
+```{r}
+# Graph Query
+## nodes
+V(g)
+## edges
+E(g)
+## immediate neighbors (friends) of John
+friends <- ego(g,order=1,nodes="John",mindist=1)[[1]] %>% print()
+## female friends of John
+friends[friends$gender == "F"]
+
+```
+
+```{r}
+# Graph Query (cont.)
+## 1- and 2-order neighbors (friends) of John
+g2 <- make_ego_graph(g, order=2, nodes="John")[[1]]
+g2 %>% plot(vertex.size=30, vertex.color=colors)
+```
+
+### Centrality Measures
+
+I Degree: the number of adjacent edges; indegree and outdegree for directed graphs\
+I Closeness: the inverse of the average length of the shortest paths to/from all other nodes\
+I Betweenness: the number of shortest paths going through a node\
+
+### Centrality Measures (cont.)
+
+I Eigenvector centrality: the values of the first eigenvector of the graph adjacency matrix\
+I Transivity, a.k.a clustering coefficient, measures the probability that the adjacent nodes of a node are connected.
+
+```{r}
+degree <- g %>% degree() %>% print()
+
+closeness <- g %>% closeness() %>% round(2) %>% print()
+
+betweenness <- g %>% betweenness() %>% print()
+
+layout1 <- g %>% layout_nicely() ## save layout for reuse
+g %>% plot(vertex.size = 30, layout = layout1)
+
+eigenvector <- evcent(g)$vector %>% round(2) %>% print()
+
+transitivity <- g %>% transitivity(type = "local") %>% print()
+
+```
+
+### Static Network Visualization
+
+I Static network visualization I Fast in rendering big graphs I For very big graphs, the most efficient way is to save visualization result into a file, instead of directly to screen. I Save network diagram into files: pdf(), bmp(), jpeg(), png(), tiff()
+
+```{r}
+library(igraph)
+## plot directly to screen when graph is small
+plot(g)
+## for big graphs, save visualization to a PDF file
+pdf("mygraph.pdf")
+plot(g)
+graphics.off() ## or dev.off()
+```
+
+```{r}
+library(visNetwork)
+## Interactive Network Visualization
+visIgraph(g, idToLabel=T) %>%
+## highlight nodes connected to a selected node
+visOptions(highlightNearest=T) %>%
+## use different icons for different types (groups) of nodes
+visGroups(groupname="person", shape="icon",
+icon=list(code="f007")) %>%
+
+## use FontAwesome icons
+addFontAwesome() %>%
+## add legend of nodes
+visLegend() 
+## to save to file
+# %>% visSave(file = "network.html")
+```
+
+```{r}
+library(visNetwork)
+# V(g)$group <- V(g)$type
+## visualization
+data <- toVisNetworkData(g)
+visNetwork(nodes=data$nodes, edges=data$edges) %>%
+visGroups(groupname="tid",shape="icon",icon=list(code="f15c")) %>%
+visGroups(groupname="person",shape="icon",icon=list(code="f007")) %>%
+visGroups(groupname="addr",shape="icon",icon=list(code="f015")) %>%
+visGroups(groupname="phone",shape="icon",icon=list(code="f095")) %>%
+visGroups(groupname="email",shape="icon",icon=list(code="f0e0")) %>%
+addFontAwesome() %>%
+visLegend()
+```

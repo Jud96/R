@@ -1,0 +1,622 @@
+---
+title: "Transformation"
+author: "Bakro"
+date: "10/27/2021"
+output:
+  html_document:
+      toc: true
+      toc_float: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Dpylr package
+
+***dplyr functions work with pipes and expect tidy data***
+
+## look at !!
+
++---------------+-----------------------------------------------------+
+| method        | description                                         |
++===============+=====================================================+
+| rename()      | change columns names                                |
++---------------+-----------------------------------------------------+
+| relocate()    | Move columns to new position.                       |
++---------------+-----------------------------------------------------+
+| mutate()      | add cols,add cols \~operation ,delete cols          |
++---------------+-----------------------------------------------------+
+| count()       | Count number of rows in each group                  |
+|               |                                                     |
+|               | defined by the variables in ... Also tally().       |
++---------------+-----------------------------------------------------+
+| distinct()    | Remove rows with duplicate values.                  |
++---------------+-----------------------------------------------------+
+| select()      | Extract columns as a table.                         |
++---------------+-----------------------------------------------------+
+| slice()       | Select rows by position.                            |
++---------------+-----------------------------------------------------+
+| filter()      | Extract rows that meet logical criteria.            |
++---------------+-----------------------------------------------------+
+| arrange()     | Order rows by values of a column or columns (low to |
+|               |                                                     |
+|               | high), use with desc() to order from high to low.   |
++---------------+-----------------------------------------------------+
+| rows_insert() | add/change/delete row or more rows                  |
+|               |                                                     |
+| rows_update() |                                                     |
+|               |                                                     |
+| rows_delete() |                                                     |
++---------------+-----------------------------------------------------+
+| group_by()    | create a"grouped" copy of a table grouped by        |
+|               | columns in ... dplyr                                |
+|               |                                                     |
+|               | functions will manipulate each "group" separately   |
+|               | and combine                                         |
+|               |                                                     |
+|               | the results.                                        |
++---------------+-----------------------------------------------------+
+| group_split() | filter data depend on group                         |
++---------------+-----------------------------------------------------+
+| summarise()   | Apply summary functions to columns to create a new  |
+|               | table ofsummary statistics. Summary functions take  |
+|               | vectors as input fun: n,n\_                         |
+|               | distinct,sum,mean,median,quantile,min,              |
+|               |                                                     |
+|               | max,sd,var                                          |
++---------------+-----------------------------------------------------+
+| ungroup()     | filter data depend on conditions                    |
++---------------+-----------------------------------------------------+
+| na_if()       | replace null valyes                                 |
++---------------+-----------------------------------------------------+
+| sql()         | sql statements                                      |
++---------------+-----------------------------------------------------+
+| pull()        | Extract column values as a vector, by name or       |
+|               | index.                                              |
++---------------+-----------------------------------------------------+
+
+## summarise()
+
++----------------------------------------------------------------+
+| Apply summary functions to columns to create a new table of    |
+|                                                                |
+| summary statistics. Summary functions take vectors as input    |
+| and                                                            |
+|                                                                |
+| return one value (sum,min,max,sd,.....)                        |
++----------------------------------------------------------------+
+
+```{r warning=FALSE , message=FALSE}
+library(tidyverse)
+library(skimr)
+```
+
+```{r}
+summarise(mtcars, avg = mean(mpg))
+```
+
+## count()
+
++-----------------------------------------------+
+| Count number of rows in each group            |
+|                                               |
+| defined by the variables in ... Also tally(). |
++-----------------------------------------------+
+
+```{r}
+count(mtcars, cyl)
+```
+
+## group_by
+
++-------------------------------------------------------------------+
+| create a"grouped" copy of a table grouped by columns in ... dplyr |
+|                                                                   |
+| functions will manipulate each "group" separately and combine     |
+|                                                                   |
+| the results.                                                      |
++-------------------------------------------------------------------+
+
+```{r}
+mtcars %>%
+group_by(cyl) %>%
+summarise(avg = mean(mpg))
+```
+
+## ungroup()
+
+|                                 |
+|---------------------------------|
+| returns ungrouped copy of table |
+
+```{r}
+t <- mtcars %>%
+group_by(cyl) %>%
+mutate(mn = cyl/mean(cyl)) %>%
+ungroup() 
+
+head(t,10)
+```
+
+## Manipulate Cases
+
+### filter()
+
+|                                          |
+|------------------------------------------|
+| Extract rows that meet logical criteria. |
+
+```{r}
+filter(mtcars, mpg > 20)
+```
+
+### distinct()
+
+|                                    |
+|------------------------------------|
+| Remove rows with duplicate values. |
+
+```{r}
+distinct(mtcars, gear)
+```
+
+### slice()
+
+|                          |
+|--------------------------|
+| Select rows by position. |
+
+```{r}
+slice(mtcars, 10:15)
+```
+
+### slice_sample()
+
+|                       |
+|-----------------------|
+| Randomly select rows. |
+
+```{r}
+slice_sample(mtcars, n = 5, replace = TRUE) # return 5 records
+```
+
+### slice_min() & slice_max()
+
+|                                                 |
+|-------------------------------------------------|
+| Select rows with the lowest and highest values. |
+
+```{r}
+t <- slice_min(mtcars, mpg, prop = 0.25) # return 5 records
+```
+
+### arrange()
+
++-----------------------------------------------------+
+| Order rows by values of a column or columns (low to |
+|                                                     |
+| high), use with desc() to order from high to low.   |
++-----------------------------------------------------+
+
+```{r eval=FALSE}
+arrange(mtcars, mpg)
+
+arrange(mtcars, desc(mpg))
+```
+
+### add_row()
+
++-----------------------------------------------------------------------+
+| Add one or more rows to a table.Select rows with the lowest and       |
+| highest values.                                                       |
++-----------------------------------------------------------------------+
+
+```{r eval=FALSE}
+add_row(cars, speed = 1, dist = 1) 
+```
+
+## Manipulate Variables
+
+Column functions return a set of columns as a new vector or table
+
+### pull()
+
+|                                                          |
+|----------------------------------------------------------|
+| **Extract column values as a vector, by name or index.** |
+
+```{r}
+t <- pull(mtcars, wt)
+```
+
+### select()
+
+| Extract columns as a table. |
+|-----------------------------|
+
+```{r}
+t <- select(mtcars, mpg, wt)
+```
+
+### relocate()
+
++-----------------------------------------------------+
+| relocate(.data, ..., .before = NULL, .after = NULL) |
+|                                                     |
+| Move columns to new position.                       |
++-----------------------------------------------------+
+
+```{r}
+t<- relocate(mtcars, mpg, cyl, .after = last_col())
+head(t,3)
+```
+
++--------------------------------------------------------------------+
+| ***Use these helpers with select() and across()***                 |
+|                                                                    |
+| ***e.g. select(mtcars, mpg:cyl)***                                 |
+|                                                                    |
+| ***contains(match) num_range(prefix, range) :, e.g. mpg:cyl***     |
+|                                                                    |
+| ***ends_with(match) all_of(x)/any_of(x, ..., vars) -, e.g,         |
+| -gear***                                                           |
+|                                                                    |
+| ***starts_with(match) matches(match) everything()***               |
++--------------------------------------------------------------------+
+
+
+
+## MANIPULATE MULTIPLE VARIABLES AT ONCE
+
+> **across**(.cols, .funs, ..., .names = NULL) Summarise
+
+or mutate multiple columns in the same way.
+
+```{r}
+summarise(mtcars, across(everything(), mean))
+```
+
+> **c_across**(.cols) Compute across columns in
+
+row-wise data.
+
+```{r}
+#transmute(rowwise(UKgas), total = sum(c_across(1:2)))
+```
+
+## MAKE NEW VARIABLES
+
+`Apply vectorized functions to columns. Vectorized functions take`
+
+`vectors as input and return vectors of the same length as output.`
+
+### mutate()
+
+mutate(.data, ..., .keep = "all", .before = NULL,.after = NULL)
+
+Compute new column(s). Also **add_column()**, **add_count()**, and
+**add_tally()**.
+
+```{r}
+t<- mutate(mtcars, gpm = 1 / mpg)
+head(t,3)
+```
+
+**transmute()**
+
+transmute(.data, ...) Compute new column(s),drop others.
+
+```{r}
+t <-transmute(mtcars, gpm = 1 / mpg)
+head(t,3)
+```
+
+### rename()
+
+rename(.data, ...) Rename columns. Use rename_with() to rename with a
+function.
+
+```{r}
+t <- rename(cars, distance = dist)
+head(t,3)
+```
+
+## Row Names
+
+Tidy data does not use rownames, which store a variable outside of the
+columns. To work with the
+
+rownames, first move them into a column.
+
+**rownames_to_column()**
+
+```{r}
+t <- rownames_to_column(mtcars, var = "C")
+head(t,3)
+```
+
+**column_to_rownames()**
+
+```{r}
+t <- column_to_rownames(t, var = "C")
+head(t,3)
+```
+
+## Combine Tables
+
+bind_cols(..., .name_repair) Returns tablesplaced side by side as a
+single table. Column
+
+lengths must be equal. Columns will NOT bematched by id (to do that look
+at Relational Data
+
+below), so be sure to check that both tables are ordered the way you
+want before binding.
+
+<hr>
+
+bind_rows(..., .id = NULL)
+
+Returns tables one on top of the other as a single table. Set .id to a
+column name to
+
+add a column of the original table names.
+
+<hr>
+
+Use a "Mutating Join" to join one table to columns from another,
+matching values with the
+
+rows that they correspond to. Each join retains a different combination
+of values from the tables.
+
+left_join(x, y, by = NULL, copy = FALSE,
+
+suffix = c(".x", ".y"), ..., keep = FALSE,
+
+na_matched = "na") Join matching
+
+values from y to x.
+
+right_join(x, y, by = NULL, copy = FALSE,
+
+suffix = c(".x", ".y"), ..., keep = FALSE,
+
+na_matches = "na") Join matching
+
+values from x to y.
+
+inner_join(x, y, by = NULL, copy = FALSE,
+
+suffix = c(".x", ".y"), ..., keep = FALSE,
+
+na_matches = "na") Join data. Retain
+
+only rows with matches.
+
+full_join(x, y, by = NULL, copy = FALSE,
+
+suffix = c(".x", ".y"), ..., keep = FALSE,
+
+na_matches = "na") Join data. Retain all
+
+values, all rows.
+
+## SET OPERATIONS
+
+intersect(x, y, ...)
+
+Rows that appear in both x and y.
+
+setdiff(x, y, ...)
+
+Rows that appear in x but not y.
+
+union(x, y, ...)
+
+Rows that appear in x or y.
+
+(Duplicates removed). union_all()
+
+retains duplicates.
+
+Use setequal() to test whether two data sets
+
+contain the exact same rows (in any order).
+
+# RECAP
+
+## 1- initialize data frames
+
+```{r}
+id <- c(1:10)
+
+name <- c("John Mendes", "Rob Stewart", "Rachel Abrahamson", "Christy Hickman", "Johnson Harper", "Candace Miller", "Carlson Landy", "Pansy Jordan", "Darius Berry", "Claudia Garcia")
+
+sex <- factor(c("M","F","M","F","M","F","M","F","M","M"))
+age <- c(22,23,25,26,27,28,24,21,29,30)
+children <- c(2,2,2,3,2,3,4,1,2,3)
+people <- data.frame(id,name,sex,age,children)
+```
+
+```{r}
+id <- c(1:5)
+iscar <- c(TRUE,FALSE,TRUE,FALSE,TRUE)
+distance_KM <- c(34.5,32,33,35,43)
+car <- data.frame(id,iscar,distance_KM)
+```
+
+## 2- explore data
+
+-   show in viewer
+
+    ```{r}
+    #View(people)
+    #view(car)
+    ```
+
+-   structures of data frames
+
+    ```{r}
+     explore <- function(dataframe)
+     {
+     # is.data.frame() 
+      class(dataframe) 
+      mode(dataframe)
+      length(dataframe)
+      str(dataframe)
+      skim(dataframe)
+      summary(dataframe)
+      nrow(dataframe)
+      ncol(dataframe)
+      attributes(dataframe)
+      head(dataframe)
+     }
+
+    ```
+
+    ```{r}
+     explore(dataframe = people)
+     explore(dataframe = car)
+    ```
+
+## 3- cleanData
+
+-   rename columns
+
+    ```{r}
+    colnames(car) <- c("Id","Iscar","distance_km")
+    colnames(car)
+    ```
+
+-   rename rows
+
+    ```{r}
+    row.names(car) <- c(str_c("zn",1:nrow(car)))
+    row.names(car)
+    ```
+
+## 4- process data
+
+-   **add columns**
+
+    ```{r}
+
+    people <- mutate(people,pow_of_age = age*age)
+    head(people,3)
+    ```
+
+-   **delete columns**
+
+    ```{r}
+    people1 <- people 
+    people1[,c(1:3)] <- NULL
+    head(people1)
+    ```
+
+-   **sort**
+
+    ```{r}
+    head(arrange(people,desc(age)),3)
+    head(arrange(people,age),3)
+    ```
+
+-   **indexing**
+
+    ```{r}
+    people1[1,1] # only one observation 
+    slice(people1,1)
+    people1[1:5,] # range of observation 
+    samples <- sample(3, size=length(people), replace=TRUE, prob=c(.60,.20,.20)) # samplinoups g data to gr
+    people1[samples == 1,c(1,2)] 
+    slice_sample(people1,n=3)
+    ```
+
+-   **indexing variables inside dataframe**
+
+    ```{r}
+    people1$age[1:3]
+    people1[["age"]][1:3]
+    people1[c(1:3),1]
+    ```
+
+-   **selection and filtering**
+
+    ```{r}
+    subset(people1, select = age ,age >25); # select and filter
+    ```
+
+-   **spilting data**
+
+    ```{r}
+     splited_data <- split(people, f= people$sex, drop = TRUE)
+    splited_data
+    ```
+
+## 5- dyplr
+
+```{r}
+dfBsp <- tibble(UID = 1:10, 
+                Name = LETTERS[1:10], 
+                Group = c("G1", "G3", "G2", 
+                          "G3", "G1", "G2", 
+                          "G2", "G3", "G1", "G2"), 
+                Value = c(seq(100, 900, by = 100), NA))
+dfBsp
+```
+
+```{r}
+dfGBy <- dplyr::group_by(dfBsp, Group); dfGBy
+```
+
+```{r}
+vlGrp <- is_grouped_df(dfGBy); vlGrp
+```
+
+```{r}
+dfGBy <- dplyr::ungroup(dfGBy); dfGBy
+vlGrp <- is_grouped_df(dfGBy); vlGrp
+```
+
+```{r}
+liBspGrp <- dplyr::group_split(dplyr::group_by(dfBsp, Group)); liBspGrp
+```
+
+```{r}
+names(liBspGrp) <- paste("Group ", unique(dfBsp$Group), sep = "")
+liBspGrp
+```
+
+```{r}
+dfBsp$Value <- dplyr::na_if(dfBsp$Value, 100); dfBsp
+```
+
+```{r}
+dplyr::summarize(dplyr::group_by(dfBsp, Group), 
+                 Anz = n(),
+                 Min = min(Value, na.rm = TRUE),
+                 Max = max(Value, na.rm = TRUE),
+                 MW = mean(Value, na.rm = TRUE),
+                 Med = median(Value, na.rm = TRUE),
+                 StdAbw = sd(Value, na.rm = TRUE), 
+                 Q25 = quantile(Value, na.rm = TRUE)["25%"], 
+                 Q75 = quantile(Value, na.rm = TRUE)["75%"], 
+                 AnzNAs = sum(is.na(Value)))
+```
+
+```{r}
+dplyr::summarize(dplyr::group_by(dfBsp, Group), 
+                 Anz = n(),
+                 Min = min(Value, na.rm = TRUE),
+                 Max = max(Value, na.rm = TRUE),
+                 MW = mean(Value, na.rm = TRUE),
+                 Med = median(Value, na.rm = TRUE),
+                 StdAbw = sd(Value, na.rm = TRUE), 
+                 Q25 = quantile(Value, na.rm = TRUE)["25%"], 
+                 Q75 = quantile(Value, na.rm = TRUE)["75%"], 
+                 AnzNAs = sum(is.na(Value)))
+```

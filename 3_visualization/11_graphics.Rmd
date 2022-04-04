@@ -1,0 +1,244 @@
+---
+title: "graphics_1"
+author: "Bakro"
+date: "1/1/2022"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+
+```
+## Basics
+
+### curves
+
+curve(function,from,to)
+
+draw curve for sin,cos,exp,log,...
+
+```{r include=FALSE}
+#?curve     # help
+curve(x^2-4, from = -2, to = +2)
+
+```
+
+type of curves
+
++---------+----------------------------+-----------+--------------------+
+| abk     | type                       | abk       | type               |
++=========+============================+===========+====================+
+| p       | points                     | s         | stairs curve       |
++---------+----------------------------+-----------+--------------------+
+| l       | line                       | h         | verticals lines    |
++---------+----------------------------+-----------+--------------------+
+| b       | separate line and points   | n         | no data            |
++---------+----------------------------+-----------+--------------------+
+| o       | overlapped line and points |           |                    |
++---------+----------------------------+-----------+--------------------+
+
+```{r}
+curve(x^2-1, from = -2, to = +2, type = "l")  # Durchgehende Linien
+ 
+```
+
+### plots
+
+```{r}
+graphics.off()
+vnX <- seq(from = -2, to = 2, by = 0.1);  
+vnY <- vnX^2 - 1; 
+plot(vnX, vnY, type = "p") # type same previous
+```
+
+pch shape
+
+| num | shape            | num | shape               |
+|-----|------------------|-----|---------------------|
+| 1   | unfilled circles | 8   | stars               |
+| 2   | triangles        | 16  | filled circles      |
+| 3   | \+               | 20  | small filled circle |
+| 4   | x                |     |                     |
+
+```{r}
+# make tables 
+
+plot(vnX, vnY, type = "p", pch = 0 , xlab = "X Label", 
+     ylab = "Y Label",
+     xlim = c(-2, +2), 
+     ylim = c(0, 10),
+     main = "Blank Plotting Canvas")      
+     
+```
+
+```{r eval = FALSE}
+mnX <- c(1:9)
+dim(mnX) <- c(3,3)
+mnY <- c(10:18)
+dim(mnY) <- c(3,3)
+matplot(mnX, mnY, type = "l")  # matrix 
+```
+
+```{r}
+plot( as.factor(diamonds$color)) # freq of values in factor bargraph 
+```
+
+### save graph
+
+see plot tab
+
+```{r eval=FALSE}
+graphics.off()
+dir <- getwd()
+pdf(file = paste(dir,"/Grafik02.pdf" ,sep = ""))
+curve(x^2-1, from = -2, to = +2)
+
+dev.off()  
+```
+
+### multiplots
+
+```{r}
+par(mfrow = c(2, 2))				# 2 row,col
+curve(1*x, from = -2, to = +2); curve(x^2, from = -2, to = +2)
+curve(x^3, from = -2, to = +2); curve(x^4, from = -2, to = +2)
+```
+
+
+```{r}
+#file.remove("Grafik03.pdf")
+pdf(file = paste(getwd(),"/Grafik03.pdf" ,sep = ""))	
+par(mfrow = c(2, 2))				# 2 row,col
+curve(1*x, from = -2, to = +2); curve(x^2, from = -2, to = +2)
+curve(x^3, from = -2, to = +2); curve(x^4, from = -2, to = +2)
+
+```
+
+### colors
+
+```{r}
+
+#colors()
+palette()
+rgb(0.5, 1.0, 0.75)
+rgb(50, 100, 75, maxColorValue = 255)
+
+```
+
+```{r}
+ plot.new()
+ plot.window(xlim=c(0,1), ylim=c(5,10))
+ #abline(a=3, b=1)
+ curve(x^2,0,1)
+ axis(1)
+ axis(2)
+ legend(x = "topright", legend = c("x/^2", "x"),
+       col = c("blue", "red"), lty = c(1, 2))
+ title(main="The Overall Title")
+ title(xlab="An x-axis label")
+ title(ylab="A y-axis label")
+ grid(col = "grey", lty = 4, lwd = 1)
+segments(x0 = -1, y0 = +1, x1 = 1, y1 = 3,
+         col = "blue", lty = 1, lwd = 2)
+ box()
+```
+
+
+```{r}
+plot.new()
+abline(a = 2, b = 0.5, col = "green", lty = 1, lwd = 2)
+abline(h = 3, col = "darkgreen", lty = 2, lwd = 2)
+abline(v = 0, col = "orange", lty = 2, lwd = 2)
+lines(vnX, vnY, col = "brown", lty = 3, lwd = 2)
+```
+
+```{r}
+vnX <- seq(from = -2, to = 2, by = 0.1); 
+vnY <- vnX^2 - 1; 
+plot(vnX, vnY, type = "n")  # Koordinatensystem etablieren
+
+points(vnX, vnY)
+lines(vnX, vnY)
+```
+
+```{r}
+plot(vnX, vnY, type = "l", col = "red", lwd = 2, frame = FALSE)
+box(which = "figure")
+box(which = "plot")
+```
+
+```{r}
+graphics.off() 
+plot(vnX, vnY, type = "n")      # keine Daten im Diagramm
+rect(c(-2, -1, 0, 1), c(-1, -1, -1, -1), 
+     c(-1, 0, 1, 2), c(3, 3, 3, 3), 
+     border = NULL, col = c("yellow", "orange", "red", "purple"))
+
+lines(vnX, vnY, col = "blue", lty = 1, lwd = 2)
+```
+
+```{r}
+plot(vnX, vnY, type = "l", col = "red", lwd = 2)
+polygon(x = c(-1, 0, 1), y = c(1, 2, 1))
+polygon(x = c(-2, -1, 0, 0, -2), y = c(0, 2, 1, 0, -1))
+```
+
+
+
+## ggEdit (uI)
+
+```{r eval=FALSE}
+#install.packages("ggedit")
+library(ggedit)
+
+plLenWid <- ggplot2::ggplot(iris,ggplot2::aes(x =Sepal.Length,y=Sepal.Width))
+
+plLenWid <- plLenWid + 
+   ggplot2::geom_point(ggplot2::aes(colour=Species)) + 
+   ggplot2::geom_line()
+
+if(interactive()){      # interactive()=TRUE, falls R interaktiv genutzt wird
+   ## Not run: 
+   plLenWid_new <- ggedit:ggedit(plLenWid)
+   plLenWid_new
+   
+   ## End(Not run)
+}
+
+```
+
+```{r eval=FALSE}
+#install.packages("ggplotgui")
+library(ggplotgui)
+
+# Aufruf ohne Data.Frame / Tibble
+ggplotgui::ggplot_shiny()
+
+# Aufruf mit Data.Frame / Tibble
+ggplotgui::ggplot_shiny(diamonds)
+```
+
+```{r eval=FALSE}
+#install.packages("esquisse")
+library(esquisse)
+library(ggplot2)
+# Aufruf ohne Data.Frame / Tibble
+esquisse::esquisser()
+
+ggplot(diamonds) +
+ aes(x = carat, y = price, colour = cut) +
+ geom_point(shape = "circle", size = 3.45) +
+ scale_color_hue(direction = 1) +
+ labs(title = "carat Vs price") +
+ theme_gray() +
+ theme(legend.position = "none")
+
+esquisse::esquisser(diamonds)
+
+# ... oder auch im Browser
+esquisse::esquisser(diamonds, viewer = "browser")
+```

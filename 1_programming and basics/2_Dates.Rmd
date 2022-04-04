@@ -1,0 +1,319 @@
+---
+title: "Dates"
+author: "Bakro"
+date: "10/5/2021"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r  setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#klippy::klippy()
+```
+
+```{r echo = FALSE , message= FALSE}
+library(tidyverse)
+library(lubridate)
+library(nycflights13)
+dashes <- function()
+{
+  cat('\n',"------------------------------------",'\n')
+}
+```
+
+A **date-time** is a point on the timeline,stored as the number of
+seconds since
+
+1970-01-01 00:00:00 UTC
+
+"2017-11-28 12:00:00 UTC"
+
+**today & now**
+
+```{r}
+dt <- as_datetime(1511870400)
+dt
+
+cat(paste("today : " ,today()));
+print(paste("now : " , now()));  
+```
+
+# PARSE DATE-TIMES
+
+> Convert strings or numbers to date-times
+
+1\. Identify the order of the year (y), month (m), day (d), hour (h),
+
+minute (m) and second (s) elements in your data.
+
+2\. Use the function below whose name replicates the order. Each
+
+accepts a tz argument to set the time zone, e.g. ymd(x, tz = "UTC").
+
+```{r}
+
+cat(paste("ymd : 2017-01-31 -->" , ymd("2017-01-31"))) ;
+cat(paste("mdy : January 31st, 2017 -->" , mdy("January 31st, 2017")));
+cat(paste("dmy(31-Jan-2017) -->" , dmy("31-Jan-2017"))); 
+cat(paste("ymd(20170131) -->" , ymd(20170131)));
+
+```
+
+```{r}
+datechr <- "2017-11-28 12:00:00 UTC"
+cat(paste("ymd hms :" ,ymd_hms("2017-01-31 20:11:59") )) ; 
+cat(paste("mdy hm :" , mdy_hm("01/31/2017 08:01") )) ;
+cat(paste("ymd" ,ymd(20170131, tz = "UTC")));
+```
+
+
+
+mdy_hms(), mdy_hm(), mdy_h().
+
+mdy_hms("11/28/2017 1:02:03")
+
+
+dmy_hms(), dmy_hm(), dmy_h().
+
+dmy_hms("1 Jan 2017 23:59:59")
+
+
+ymd(), ydm(). ymd(20170131)
+
+
+mdy(), myd(). mdy("July 4th, 2000")
+
+
+dmy(), dym(). dmy("4th of July '99")
+
+
+yq() Q for quarter. yq("2001: Q3")
+
+
+my(), ym(). my("07-2020")
+
+
+
+
+# make_datetime
+
+```{r}
+flights_dt  <- flights %>% 
+  select(year, month, day, hour, minute) %>% 
+  mutate(departure = make_datetime(year, month, day, hour, minute))
+head(flights_dt)
+```
+
+# Date-time components
+
+```{r}
+datetime <- ymd_hms("2016-07-08 12:34:56")
+date(datetime)   # "2016-07-08"
+isoyear(datetime)  #2016
+year(datetime)    #2016
+month(datetime)   #7
+mday(datetime)    #8
+yday(datetime)    #190 order day in  year
+wday(datetime, label  =TRUE) # fr order day in week
+weekdays(datetime )  # Freitag"
+hour(datetime)    #12
+minute(datetime)  # 34
+second(datetime)    # 56
+tz(datetime)        # "UTC"
+quarter(datetime)   #3
+semester(datetime)  #2
+am(datetime)    # false
+pm(datetime)  # True
+
+
+```
+
+# update dates
+
+```{r}
+datetime
+update(datetime,mday = 2 , hour = 1)
+```
+
+# Round Date-times(optional)
+
+```{r}
+floor_date(datetime, unit = "second")
+#Round down to nearest unit.
+floor_date(datetime, unit = "month")
+round_date(datetime, unit = "second")
+#Round to nearest unit.
+round_date(datetime, unit = "month")
+ceiling_date(datetime, unit = "second",
+change_on_boundary = NULL)
+#Round up to nearest unit.
+ceiling_date(datetime, unit = "month")
+```
+
+# Time Zones (optional)
+
+> R recognizes \~600 time zones.
+>
+> Each encodes the time zone, Daylight Savings Time, and historical
+> calendar variations for an area.
+>
+> R assignsone time zone per vector.
+>
+> Use the UTC time zone to avoid Daylight Savings.
+>
+> OlsonNames() Returns a list of valid time zone names. OlsonNames()
+>
+> Sys.timezone() Gets current time zone.
+
+-   the same date-time in a new time zone (a new clock time).
+
+Also local_time(dt, tz, units).
+
+-   force_tz(time, tzone = "")
+
+    Get the same clock time in a new time zone (a new date-time).
+
+    Also force_tzs().
+
+```{r}
+
+with_tz(datetime, "US/Pacific")
+
+force_tz(datetime, "US/Pacific")
+```
+
+# Math with Date_times 
+
+## periods
+
+Add or subtract periods to model events that happen at specific clock
+
+times, like the NYSE opening bell.
+
+```{r}
+p <- years(1) + months(3) + weeks(2) + hours(12)+ minutes(3) + 
+    seconds(3) + milliseconds(20)
+p
+as.period(p)
+period_to_seconds(p)
+```
+
+## duration
+
+Add or subtract durations to model physical processes, like battery
+life.
+
+Durations are stored as seconds, the only time unit with a consistent
+length.
+
+Difftimes are a class of durations found in base R.
+
+```{r}
+dyears(x = 1) #31536000x seconds.
+dmonths(x = 1) #2629800x seconds.
+dweeks(x = 1) #604800x seconds.
+ddays(x = 1) #86400x seconds.
+dhours(x = 1)# 3600x seconds.
+dminutes(x = 1)# 60x seconds.
+dseconds(x = 1) #x seconds.
+dmilliseconds(x = 1)# x x 10-3 seconds.
+dmicroseconds(x = 1) #x x 10-6 seconds.
+dnanoseconds(x = 1) #x x 10-9 seconds.
+dpicoseconds(x = 1) #x x 10-12 seconds.
+
+```
+
+## intervals
+
+Divide an interval by a duration to determine its physical length,
+divide
+
+an interval by a period to determine its implied length in clock time.
+
+```{r}
+i <- interval( datetime,ymd("2017-01-01")) 
+j <- datetime %--% ymd("2017-12-31")
+datetime
+i
+j
+```
+
+a %within% b Does interval or date-time a fall
+
+within interval b?
+
+```{r}
+ now() %within% i
+```
+
+int_start(int) Access/set the start date-time of
+
+an interval. Also int_end().
+
+```{r}
+int_start(i) <- now();
+int_start(i)
+```
+
+int_aligns(int1, int2) Do two intervals share a
+
+boundary? Also int_overlaps().
+
+```{r}
+ int_aligns(i, j)
+```
+
+int_diff(times) Make the intervals that occur
+
+between the date-times in a vector.
+
+```{r}
+datetime -> dt
+v <-c(dt, dt + 100, dt + 1000); int_diff(v)
+```
+
+int_flip(int) Reverse the direction of an
+
+interval. Also int_standardize().
+
+```{r}
+ int_flip(i)
+```
+
+int_length(int) Length in seconds.
+
+```{r}
+int_length(i)
+```
+
+int_shift(int, by) Shifts an interval up or down
+
+the timeline by a timespan.
+
+```{r}
+int_shift(i, days(-1))
+```
+
+as.interval(x, start, ...) Coerce a timespan to
+
+an interval with the start date-time. Also
+
+is.interval().
+
+```{r}
+as.interval(days(1), start = now())
+```
+
+
+sequence of time 
+```{r}
+start <- ymd("2016-07-08 ")
+end <- ymd("2016-07-12 ")
+seq(start , end , by =1)
+```
+

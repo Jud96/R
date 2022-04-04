@@ -1,0 +1,533 @@
+---
+title: "List"
+author: "Bakro"
+date: "10/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Purr
+
+## Map Functions
+
+### ONE LIST
+
+**map(.x, .f, ...) Apply a function to each element**
+
+**of a list or vector, return a list.**
+
+```{r}
+x <- list(1:10, 11:20, 21:30)
+l1 <- list(x = c("a", "b"), y = c("c", "d"))
+map(l1, sort, decreasing = TRUE)
+```
+
+#### map_dbl(.x, .f, ...)
+
+***Return a double vector.***
+
+```{r}
+map_dbl(x, mean)
+```
+
+#### map_int(.x, .f, ...)
+
+***Return an integer vector.***
+
+```{r}
+map_int(x, length)
+```
+
+#### map_chr(.x, .f, ...)
+
+***Return a character vector.***
+
+```{r}
+map_chr(l1, paste, collapse = "")
+```
+
+#### map_lgl(.x, .f, ...)
+
+***Return a logical vector.***
+
+```{r}
+map_lgl(x, is.integer)
+```
+
+#### map_dfc(.x, .f, ...)
+
+***Return a data frame created by column-binding.***
+
+```{r}
+map_dfc(l1, rep, 3)
+```
+
+#### map_dfr(.x, .f, ..., .id = NULL)
+
+***Return a data frame created by row-binding.***
+
+```{r}
+map_dfr(x, summary)
+```
+
+#### walk(.x, .f, ...)
+
+***Trigger side effects, return invisibly.***
+
+```{r}
+walk(x, print)
+```
+
+### TWO LISTS
+
+***map2(.x, .y, .f, ...) Apply a function to pairs of***
+
+***elements from two lists or vectors, return a list.***
+
+```{r}
+y <- list(1, 2, 3); z <- list(4, 5, 6); l2 <- list(x = "a", y = "z")
+
+map2(x, y, ~ .x * .y) # element wise
+```
+
+#### map2_dbl(.x, .y, .f, ...)
+
+***Return a double vector.***
+
+```{r}
+map2_dbl(y, z, ~ .x / .y) # element wise
+```
+
+#### map2_int(.x, .y, .f, ...)
+
+***Return an integer vector.***
+
+```{r}
+list1 <- list(1L,2L) ;list2 <- list(3L,4L)
+map2_int(list1, list2,~ .x + .y)  # error
+```
+
+#### map2_chr(.x, .y, .f, ...)
+
+***Return a character vector.***
+
+```{r}
+map2_chr(l1, l2, paste,collapse = ",", sep = ":")
+```
+
+#### map2_lgl(.x, .y, .f, ...)
+
+***Return a logical vector.***
+
+```{r}
+
+map2_lgl(l2, l1, `%in%`)
+```
+
+***map2_dfc(.x, .y, .f, ...)***
+
+***Return a data frame created by column-binding.***
+
+```{r}
+map2_dfc(l1, l2,~ as.data.frame(c(.x, .y)))
+```
+
+#### map2_dfr(.x, .y, .f, ..., .id =NULL)
+
+Return a data frame created by row-binding.
+
+```{r}
+map2_dfr(l1, l2,
+
+~ as.data.frame(c(.x, .y)))
+```
+
+#### walk2(.x, .y, .f, ...) Trigger
+
+side effects, return invisibly.
+
+```{r}
+#walk2(objs, paths, save)
+```
+
+### MANY LISTS
+
+pmap(.l, .f, ...) Apply a function to groups of
+
+elements from a list of lists or vectors, return a list.
+
+```{r}
+pmap(list(x, y, z), ~ ..1 * (..2 + ..3))
+```
+
+#### pmap_dbl(.l, .f, ...)
+
+***Return a double vector.***
+
+```{r}
+pmap_dbl(list(y, z), ~ .x / .y)
+```
+
+#### pmap_int(.l, .f, ...)
+
+***Return an integer vector.***
+
+```{r}
+pmap_int(list(list1, list2), `+`)    # error
+```
+
+#### pmap_chr(.l, .f, ...)
+
+***Return a character vector.***
+
+```{r}
+pmap_chr(list(l1, l2), paste,collapse = ",", sep = ":")
+```
+
+#### pmap_lgl(.l, .f, ...)
+
+***Return a logical vector.***
+
+```{r}
+pmap_lgl(list(l2, l1), `%in%`)
+```
+
+#### pmap_dfc(.l, .f, ...)
+
+***Return a data frame created bycolumn-binding.***
+
+```{r}
+pmap_dfc(list(l1, l2),~ as.data.frame(c(.x, .y)))
+```
+
+#### pmap_dfr(.l, .f, ..., .id =NULL)
+
+***Return a data frame created by row-binding.***
+
+```{r}
+pmap_dfr(list(l1, l2),~ as.data.frame(c(.x, .y)))
+```
+
+#### pwalk(.l, .f, ...)
+
+***Trigger side effects, return invisibly.***
+
+```{r}
+#pwalk(list(objs, paths), save)
+```
+
+### LISTS AND INDEXES
+
+imap(.x, .f, ...)
+
+Apply .f to each element and its index, return a list.
+
+```{r}
+imap(y, ~ paste0(.y, ": ", .x))
+```
+
+## Work with Lists
+
+### Filter
+
+#### keep(.x, .p, ...)
+
+Select elements that pass a logical test.
+
+Conversely, discard().
+
+```{r}
+temp <- list(NA,3,NA)
+keep(temp, is.na)
+```
+
+### compact(.x, .p = identity)
+
+Drop empty elements.
+
+```{r}
+temp <- list(NULL,3,NA)
+compact(temp)
+```
+
+### head_while(.x, .p, ...)
+
+Return head elements until one does not pass.
+
+Also tail_while().
+
+```{r}
+temp <- list("3",1,"4")
+head_while(temp, is.character)
+```
+
+### detect
+
+detect(.x, .f, ..., dir =c("forward", "backward"),
+
+.right = NULL, .default = NULL)
+
+Find first element to pass.
+
+```{r}
+detect(temp, is.character)
+```
+
+## detect_index
+
+detect_index(.x, .f, ..., dir =c("forward", "backward"),.right = NULL)
+
+Find index of first element to pass.
+
+```{r}
+ detect_index(temp, is.character)
+```
+
+### every(.x, .p, ...)
+
+Do all elements pass a test?
+
+```{r}
+every(temp, is.character)
+temp2 <- list("c")
+every(temp2, is.character)
+
+
+```
+
+### some(.x, .p, ...)
+
+Do some elements pass a test?
+
+```{r}
+some(temp, is.character)
+```
+
+### none(.x, .p, ...)
+
+Do no elements pass a test?
+
+```{r}
+none(temp, is.character)
+temp2 <-  list(1L)
+none(temp2, is.character)
+```
+
+### has_element(.x, .y)
+
+Does a list contain an element?
+
+```{r}
+has_element(temp, "3")
+```
+
+### vec_depth(x)
+
+Return depth (number of levels
+
+of indexes).
+
+```{r}
+vec_depth(temp)
+temp
+```
+
+### Index
+
+#### pluck(.x, ..., .default=NULL)
+
+Select an element by name or index. Also attr_getter() and chuck().
+
+```{r}
+temp <- list(first ="1",second = 2L ,TRUE ,list(1,2))
+pluck(temp, 1)
+temp %>% pluck(first)
+pluck(temp,first)
+temp$firstelement
+temp[[1]]
+```
+
+### assign_in(x, where, value)
+
+Assign a value to a location using pluck selection.
+
+```{r}
+assign_in(temp, "first", 5)
+
+# temp  %>% assign_in("first", 5)
+```
+
+#### modify_in(.x, .where, .f)
+
+Apply a function to a value at
+
+a selected location.
+
+```{r}
+modify_in(temp, "second", abs)
+
+# temp %>% modify_in("second", abs)
+```
+
+### Reshape
+
+#### flatten(.x) 
+
+Remove a level of indexes from a list.
+
+Also flatten_chr() etc.
+
+```{r}
+flatten(temp)
+```
+
+array_tree(array, margin = NULL) Turn array into list.
+
+Also array_branch().
+
+```{r}
+array_tree(matrix(1:9,nrow = 3), margin = 2) # 1 row 2 col ,....
+```
+
+#### cross2(.x, .y, .filter = NULL)
+
+All combinations of .x and .y.
+
+Also cross(), cross3(), and cross_df().
+
+```{r}
+cross2(1:2, 4)
+```
+
+#### transpose(.l, .names = NULL)
+
+Transposes the index order in
+
+a multi-level list.
+
+```{r}
+temp2 <- list(1:2,3:4,5:6)
+transpose(temp2)
+```
+
+#### set_names(x, nm = x)
+
+Set the names of a vector/list
+
+directly or with a function.
+
+```{r}
+set_names(temp2, c("p", "q", "r"))
+set_names(temp2, tolower)
+```
+
+### Modify
+
+#### modify(.x, .f, ...) 
+
+Apply afunction to each element. Also
+
+modify2(), and imodify().
+
+```{r}
+modify(x, ~.+ 2)
+```
+
+#### modify_at(.x, .at, .f, ...)
+
+Apply a function to selected elements.
+
+Also map_at().
+
+modify_at(x, "b", \~.+ 2)
+
+#### modify_if(.x, .p, .f, ...) 
+
+Apply a function to elements that pass
+
+a test. Also map_if().
+
+```{r}
+modify_if(x, is.numeric,~.+2)
+```
+
+#### modify_depth(.x, .depth, .f, ...)
+
+Apply function to each element
+
+at a given level of a list. Alsomap_depth().
+
+```{r}
+modify_depth(y, 2, ~.+ 2)
+```
+
+### Combine
+
+```{r}
+# Add values to end of list.
+# append(list1, list2, after =length(list1))
+append(list1, list(d = 1))
+# prepend(x, values, before = 1)
+# Add values to start of list.
+prepend(list1, list(d = 1))
+# splice(…) Combine objects into
+# a list, storing S3 objects as sublists.
+splice(list1, list2, "foo")
+```
+
+### List-Columns
+
+List-columns are columns of a data frame where each element is a list or vector instead of an atomic
+
+value. Columns can also be lists of data frames. See tidyr for more about nested data and list columns.
+
+WORK WITH LIST-COLUMNS
+
+Manipulate list-columns like any other kind of column, using dplyr functions like mutate() and
+
+transmute(). Because each element is a list, use map functions within a column function to
+
+manipulate each element.
+
+map(), map2(), or pmap() return lists and will
+
+create new list-columns.
+
+```{r}
+# starwars %>%
+# transmute(ships = map2(vehicles,
+# starships, append)
+```
+
+Suffixed map functions like map_int() return an atomic data type and
+
+will simplify list-columns into regular columns.
+
+```{r}
+starwars %>%
+mutate(n_films = map_int(films, length))
+```
+
+### Reduce
+
+reduce(.x, .f, ..., .init, .dir = c("forward",
+
+"backward")) Apply function recursively to each
+
+element of a list or vector. Also reduce2().
+
+```{r}
+reduce(x, sum)
+```
+
+accumulate(.x, .f, ..., .init) Reduce a list, but also
+
+return intermediate results. Also accumulate2().
+
+```{r}
+accumulate(x, sum)
+```

@@ -1,0 +1,301 @@
+---
+title : "consequences of severe weather in us"
+author: "Bakro"
+date: "10/30/2021"
+output: 
+   rmdformats::readthedown 
+---
+
+```{r setup, include=FALSE }
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Influence severe weather events on Personal & Economic costs in the United States, 1950 - 2011**
+
+## Introduction
+
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+## goal of study
+
+most harmful events to population health
+
+greatest economic consequences from severe weather
+
+## Synopsis
+
+::: {.alert .alert-block .alert-info style="font-size:14px; font-family:verdana; line-height: 1.7em;"}
+📌   tornado is most dangerous event for person life (fatal and injuries over time )
+
+frequency during period(1950-2011) 60652 (5633 fatalities/91346 injuries)
+
+📌 FLOOD is most dangerous event for economic 150B over time occurred 25326
+
+with average of Total damage is 0.1B
+
+📌 HURRICANE/TYPHOON is most bad consequences on economic with average of Total
+
+damage is 0.82B but it occurred 88
+
+📌 there are some rare situations that occurred 1 or 2 time over 1B damage on economic
+
+📌 most dangerous event on crops is DROUGHT that occurred 2488 times with 13.97
+
+over time
+
+📌 there are more but i find graphics and tables tell story better you can find that in
+
+Result section
+:::
+
+## processing of data
+
+### conclusion of process
+
+-   **select important data and explain it .**
+
+-   grouping by event and than show top 10 dangerous event **fatalities_graphics_code**
+
+-   grouping by event and than show top 10 dangerous event **injuries_graphics_code**
+
+-   economic consequences
+
+    -   process units and their values
+
+    -   replace this characher in cropdmgexp and propdmgexp
+
+    -   grouping data by event type
+
+    -   viz economic consequences
+
+### library
+
+```{r }
+library(tidyverse)
+library(shiny)
+```
+
+### Data
+
+```{r}
+# clear memory
+rm(list = ls())
+## download file
+#download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2","data/storm.csv")
+ data <-read.csv("data/storm.csv")
+```
+
+### interested data
+
+```{r eval=FALSE}
+colnames(data)
+```
+
+```{r}
+
+df <- data %>% select(EVTYPE,FATALITIES,INJURIES,PROPDMG,PROPDMGEXP,CROPDMG,CROPDMGEXP)
+# convert colnames to lowercase easier to reuse
+colnames(df) <- str_to_lower(colnames(df))
+# deal with  evtype , propdmgexp,cropdmgexp as factors
+df$evtype <- as.factor(df$evtype)
+df$propdmgexp <- as.factor(df$propdmgexp)
+df$cropdmgexp <- as.factor(df$cropdmgexp)
+rm(data)
+```
+
+**EVTYPE** what type of severe weather
+
+**FATALITIES** - the number of deaths, if any, caused by the event.
+
+**INJURIES** - the number of injuries, if any, caused by the event.
+
+**PROPDMG** - the mantissa of the value of property damaged, in dollars.
+
+**PROPDMGEXP** - the exponent of the value of property damaged. This varies in format, but is generally a text string.
+
+**CROPDMG** - the mantissa of the value of crops damaged, in dollars.
+
+**CROPDMGEXP** - the exponent of the value of property damaged. This varies in format, but is generally a text string.
+
+### explore data
+
+```{r}
+skimr::skim(df)
+```
+
+### fatalities_graphics_code
+
+```{r}
+# we use t as temporary variable 
+# fetch more 10 fatal severe weather
+t <- with(df , aggregate(fatalities~evtype,FUN = sum)) %>% 
+          top_n(10) 
+# ranking depend on fatal number 
+t <- t[order(t$fatalities), ] 
+t$evtype <- factor(t$evtype, levels = t$evtype)
+
+
+          # viz of result
+   g_fatal<-   ggplot(data = t ,aes(x =evtype,y =fatalities)) +
+          geom_col(color = "tomato3",fill ="orangered") + 
+          geom_label(aes(label =fatalities)) +
+          labs(title=" Top 10 dangerous fatal weather event") +
+          coord_flip()
+
+   
+          
+```
+
+### injuries_graphics_code
+
+```{r}
+# we use t as temporary variable 
+# fetch more 10  severe weather that have more injuries
+
+t <- with(df , aggregate(injuries~evtype,FUN = sum)) %>% 
+          top_n(10) 
+# ranking depend on fatal number 
+t <- t[order(t$injuries), ] 
+t$evtype <- factor(t$evtype, levels = t$evtype)
+
+
+          # viz of result
+   g_injuries<-   ggplot(data = t ,aes(x =evtype,y =injuries)) +
+          geom_col(color = "tomato3",fill ="orangered") + 
+          geom_label(aes(label =injuries)) +
+          labs(title=" Top 10 dangerous  weather cause injures ") +
+          coord_flip()
+ 
+```
+
+summary tables for fatalities & injuries
+
+```{r}
+summary_damages_people <- df %>% 
+                          group_by(evtype) %>% 
+                          summarise(
+                            freq = n() ,
+                            numberoffatalities = sum(fatalities),
+                            numberofinjuries = sum(injuries),
+                            meanoffatalities = mean(fatalities),
+                            meanofinjuries = mean(injuries) 
+                          )
+```
+
+### economic consequences
+
+#### process units and their values
+
+```{r}
+# discover symbols and their values and save them in df
+unit <- c("","-","?","+",0:8,"h","H","k","K","m","M","b","B")
+value_unit <-c(0,0,0,1,1,10,100,1e+3,1e+4,1e+5,1e+6,1e+7,1e+8,100,100,1e+3,1e+3
+              ,1e+6,1e+6,1e+9,1e+9)
+units <- data.frame(unit,value_unit)
+# view this units 
+as_tibble(units)
+```
+
+#### replace this characher in cropdmgexp and propdmgexp
+
+```{r}
+
+# t as usual temp var
+# replace symbols with numbers for calculation 
+#1- propdmgexp
+# here we have used inner join extract numeric values and than insert this 
+# numeric value to propdmgexp
+t <- df %>% inner_join(units ,by = c("propdmgexp" ="unit"))
+df$propdmgexp <- t[,"value_unit"]
+#2- cropdmgexp 
+# same first casting 
+t<- df %>% inner_join(units, by = c("cropdmgexp"= "unit"))
+df$cropdmgexp <- t[,"value_unit"]
+
+```
+
+#### grouping data by event type
+
+```{r}
+ 
+
+
+# include table that have summary of our research (person & economic )
+summary_damages <- df %>% 
+                    group_by(evtype) %>% 
+                    summarise(
+                  freq = n(),    
+       TotalDamageInBillions = round(
+         sum(propdmgexp*propdmg + cropdmgexp *cropdmg)/10^9,2),
+       DamageOnPropertyB =round(sum(propdmgexp*propdmg)/10^9,2),
+       DamageOnCropB = round(sum(cropdmgexp *cropdmg)/10^9,2),
+       avgtotaldamage = round(
+         mean(propdmgexp*propdmg + cropdmgexp *cropdmg)/10^9,2),
+       avgDamagePropertyB = round(mean(propdmgexp*propdmg)/10^9,2),
+       avgDamageCropB = round(mean(cropdmgexp *cropdmg)/10^9,2)
+        
+                              )
+
+# ranking depend on TotalDamageInBillions
+summary_damages <- summary_damages[
+                order(summary_damages$TotalDamageInBillions,decreasing = TRUE),] 
+# to show graph with Ranking 
+summary_damages$evtype <- factor(summary_damages$evtype, levels =                                           summary_damages$evtype)
+
+
+
+```
+
+#### viz economic consequences
+
+```{r}
+# viz of top ten 
+
+# this is optional graphics
+g_economic <- ggplot(data = summary_damages[1:10,] ,
+                     aes(x =fct_rev(evtype),y=TotalDamageInBillions)) +
+              geom_col(color = "tomato3",fill ="orangered") + 
+              geom_label(aes(label =TotalDamageInBillions)) +
+              labs(title=" Top 10 dangerous  weather cause on economic") +
+              coord_flip()
+
+
+## i want to know crop damage and property damage in one graph
+## i need to reshape my data (pivot longer)
+t <-summary_damages %>% tidyr::pivot_longer(cols = c(DamageOnCropB,DamageOnPropertyB),names_to = "damagetype",values_to = "damageindollar")
+## viz and filling depend on damage type and than make it interactive graph 
+g_economic_stack <- ggplot(data = t[1:20,] ,
+              aes(x =fct_rev(evtype),y=damageindollar ,fill =damagetype)) +
+              geom_col() + 
+              labs(title=" Top 10 dangerous  weather cause on economic") +
+              xlab("DamageInBilliondollar")+
+              ylab("event") +
+              coord_flip()
+
+g_economic_stack <- plotly::ggplotly(g_economic_stack)
+```
+
+## Results
+
+```{r ch2}
+g_injuries
+g_fatal
+g_economic_stack
+
+```
+
+### summary_damages_people
+
+```{r fhtf}
+DT::datatable(summary_damages_people,extensions = 'AutoFill', rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T))
+```
+
+### summary_damages_economic
+
+```{r }
+
+  DT::datatable(summary_damages)
+
+```

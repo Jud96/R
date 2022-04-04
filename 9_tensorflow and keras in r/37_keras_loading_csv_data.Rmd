@@ -1,0 +1,215 @@
+---
+title: "37_keras_loading_csv_data"
+author: "Bakro"
+date: "1/4/2022"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading CSV data
+
+```{r}
+library(keras)
+library(tfdatasets)
+
+TRAIN_DATA_URL <- "https://storage.googleapis.com/tf-datasets/titanic/train.csv"
+TEST_DATA_URL <- "https://storage.googleapis.com/tf-datasets/titanic/eval.csv"
+
+train_file_path <- get_file("train_csv", TRAIN_DATA_URL)
+test_file_path <- get_file("eval.csv", TEST_DATA_URL)
+```
+
+```{r}
+train_dataset <- make_csv_dataset(
+  train_file_path, 
+  field_delim = ",",
+  batch_size = 5, 
+  num_epochs = 1
+)
+
+test_dataset <- train_dataset <- make_csv_dataset(
+  test_file_path, 
+  field_delim = ",",
+  batch_size = 5, 
+  num_epochs = 1
+)
+```
+
+```{r}
+# We can see an element of the dataset with:
+train_dataset %>% 
+  reticulate::as_iterator() %>% 
+  reticulate::iter_next() %>% 
+  reticulate::py_to_r()
+
+# You can see that make_csv_dataset creates a list of Tensors each representing a column. This resembles a lot like R’s data.frame, the most significative difference is that a TensorFlow dataset is an iterator - meaning that each time you call iter_next it will yield a different batch of rows from the dataset.
+# 
+# As you can see above, the columns in the CSV are named. The dataset constructor will pick these names up automatically. If the file you are working with does not contain the column names in the first line, pass them in a character vector to the column_names argument in the make_csv_dataset function.
+# 
+# If you need to omit some columns from the dataset, create a list of just the columns you plan to use, and pass it into the (optional) select_columns argument of the constructor
+```
+
+### Data preprocessing
+
+A CSV file can contain a variety of data types.
+Typically you want to convert from those mixed types to a fixed length vector before feeding the data into your model.
+
+You can preprocess your data using any tool you like (like nltk or sklearn), and just pass the processed output to TensorFlow.
+
+TensorFlow has a built-in system for describing common input conversions: `feature_column`, which we are going to use via the high-level interface called `feature_spec`.
+
+The primary advantage of doing the preprocessing inside your model is that when you export the model it includes the preprocessing.
+This way you can pass the raw data directly to your model.
+
+First let's define the `spec`
+
+```{r eval=FALSE}
+spec <- feature_spec(train_dataset, survived ~ .)
+```
+
+### CONTINUOUS DATA
+
+```{r eval=FALSE}
+# For continuous data we use the step_numeric_column:
+
+spec <- spec %>% 
+  step_numeric_column(all_numeric())
+# After adding a step we need to fit our spec:
+
+spec <- fit(spec)
+# We can then create a layer_dense_features that receives our dataset as input and returns an array containing all dense features:
+
+layer <- layer_dense_features(feature_columns = dense_features(spec))
+train_dataset %>% 
+  reticulate::as_iterator() %>% 
+  reticulate::iter_next() %>% 
+  layer()
+```
+
+```{r eval=FALSE}
+# It’s usually a good idea to normalize all numeric features in a neural network. We can use the same step_numeric_column with an additional argument :
+
+spec <- feature_spec(train_dataset, survived ~ .)
+spec <- spec %>% 
+#   step_numeric_column(all_numeric(), normalizer_fn = scaler_standard())
+# We can then fit and creat the layer_dense_features to take a look at the output:
+
+spec <- fit(spec)
+layer <- layer_dense_features(feature_columns = dense_features(spec))
+train_dataset %>% 
+  reticulate::as_iterator() %>% 
+  reticulate::iter_next() %>% 
+  layer()
+```
+
+### CATEGORICAL DATA
+
+```{r warning=FALSE}
+
+
+# Categorical data can’t be directly included in the model matrix - we need to perform some kind of transformation in order to represent them as numbers. Representing categorical variables as a set of one-hot encoded columns is very common in practice.
+
+# We can also perform this transformation using the feature_spec API:
+# 
+# Let’s again define our spec and add some steps:
+
+spec <- feature_spec(train_dataset, survived ~ .)
+spec <- spec %>% 
+  step_categorical_column_with_vocabulary_list(sex) %>% 
+  step_indicator_column(sex)
+# We can now see the output with:
+
+spec <- fit(spec)
+layer <- layer_dense_features(feature_columns = dense_features(spec))
+train_dataset %>% 
+  reticulate::as_iterator() %>% 
+  reticulate::iter_next() %>% 
+  layer()
+```
+
+```{r warning=FALSE}
+# It’s straightforward to make this transformation for all the categorical features in the dataset:
+
+spec <- feature_spec(train_dataset, survived ~ .)
+spec <- spec %>% 
+  step_categorical_column_with_vocabulary_list(all_nominal()) %>% 
+  step_indicator_column(all_nominal())
+# Now let’s see the output:
+
+spec <- fit(spec)
+layer <- layer_dense_features(feature_columns = dense_features(spec))
+train_dataset %>% 
+  reticulate::as_iterator() %>% 
+  reticulate::iter_next() %>% 
+  layer()
+```
+
+### COMBINING EVERYTHING
+
+```{r warning=FALSE}
+# We demonstrated how to use the feature_spec interface both for continuous and categorical data separetedly. It’s also possible to combine all transformations in a single spec:
+
+spec <- feature_spec(train_dataset, survived ~ .) %>% 
+  step_numeric_column(all_numeric(), normalizer_fn = scaler_standard()) %>% 
+  step_categorical_column_with_vocabulary_list(all_nominal()) %>% 
+  step_indicator_column(all_nominal())
+# Now, let’s fit the spec and take a look at the output:
+
+spec <- fit(spec)
+layer <- layer_dense_features(feature_columns = dense_features(spec))
+train_dataset %>% 
+  reticulate::as_iterator() %>% 
+  reticulate::iter_next() %>% 
+  layer()
+```
+
+### Building the model
+
+```{r}
+model <- keras_model_sequential() %>% 
+  layer_dense_features(feature_columns = dense_features(spec)) %>% 
+  layer_dense(units = 128, activation = "relu") %>% 
+  layer_dense(units = 128, activation = "relu") %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+
+model %>% compile(
+  loss = "binary_crossentropy",
+  optimizer = "adam",
+  metrics = "accuracy"
+)
+```
+
+### Train, evaluate and predict
+
+```{r}
+model %>% 
+  fit(
+    train_dataset %>% dataset_use_spec(spec) %>% dataset_shuffle(500),
+    epochs = 20,
+    validation_data = test_dataset %>% dataset_use_spec(spec),
+    verbose = 2
+  )
+```
+
+```{r}
+model %>% evaluate(test_dataset %>% dataset_use_spec(spec), verbose = 0)
+```
+
+```{r}
+batch <- test_dataset %>% 
+  reticulate::as_iterator() %>% 
+  reticulate::iter_next() %>% 
+  reticulate::py_to_r()
+predict(model, batch)
+```

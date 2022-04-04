@@ -1,0 +1,158 @@
+---
+title: "34_keras_transfer_learning"
+author: "Bakro"
+date: "1/4/2022"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Transfer learning with tfhub
+
+```{r}
+```
+
+
+```{r}
+# remotes::install_github("rstudio/tfds")
+# tfds::install_tfds()
+#devtools::install_github("rstudio/tfhub")
+library(tfhub)
+install_tfhub()
+```
+
+
+
+```{r message=FALSE , warning=FALSE}
+
+library(keras)
+library(tensorflow)
+library(tfhub)
+library(tfds)
+library(tfdatasets)
+
+
+```
+
+```{r warning=FALSE , message=FALSE}
+imdb <- tfds_load(
+  "imdb_reviews:1.0.0", 
+  split = list("train[:60%]", "train[-40%:]", "test"), 
+  as_supervised = TRUE
+)
+summary(imdb)
+```
+
+
+```{r}
+# tfds_load returns a TensorFlow Dataset, an abstraction that represents a sequence of elements, in which each element consists of one or more components.
+# 
+# To access individual elements, of a Dataset you can use
+first <- imdb[[1]] %>% 
+  dataset_batch(1) %>% # Used to get only the first example
+  reticulate::as_iterator() %>% 
+  reticulate::iter_next()
+str(first)
+```
+
+### Build the model
+
+The neural network is created by stacking layers---this requires three main architectural decisions:
+
+1.  How to represent the text?
+
+2.  How many layers to use in the model?
+
+3.  How many hidden units to use for each layer?
+
+In this example, the input data consists of sentences.
+The labels to predict are either 0 or 1.
+
+One way to represent the text is to convert sentences into embeddings vectors.
+We can use a pre-trained text embedding as the first layer, which will have three advantages: \* we don't have to worry about text preprocessing, \* we can benefit from transfer learning, \* the embedding has a fixed size, so it's simpler to process.
+
+For this example we will use a pre-trained text embedding model from [TensorFlow Hub](https://github.com/rstudio/tfhub) called [google/tf2-preview/gnews-swivel-20dim/1](https://tfhub.dev/google/tf2-preview/gnews-swivel-20dim/1).
+
+There are three other pre-trained models to test for the sake of this tutorial:
+
+-   [google/tf2-preview/gnews-swivel-20dim-with-oov/1](https://tfhub.dev/google/tf2-preview/gnews-swivel-20dim-with-oov/1) - same as google/tf2-preview/gnews-swivel-20dim/1, but with 2.5% vocabulary converted to OOV buckets.
+    This can help if vocabulary of the task and vocabulary of the model don't fully overlap.
+
+-   [google/tf2-preview/nnlm-en-dim50/1](https://tfhub.dev/google/tf2-preview/nnlm-en-dim50/1) - A much larger model with \~1M vocabulary size and 50 dimensions.
+
+-   [google/tf2-preview/nnlm-en-dim128/1](https://tfhub.dev/google/tf2-preview/nnlm-en-dim128/1) - Even larger model with \~1M vocabulary size and 128 dimensions.
+
+Let's first create a Keras layer that uses a TensorFlow Hub model to embed the sentences, and try it out on a couple of input examples.
+Note that no matter the length of the input text, the output shape of the embeddings is: `(num_examples, embedding_dimension)`.
+
+```{r warning=FALSE}
+embedding_layer <- layer_hub(handle = "https://tfhub.dev/google/tf2-preview/gnews-swivel-20dim/1")
+embedding_layer(first[[1]])
+```
+
+```{r warning=FALSE}
+model <- keras_model_sequential() %>% 
+  layer_hub(
+    handle = "https://tfhub.dev/google/tf2-preview/gnews-swivel-20dim/1",
+    input_shape = list(),
+    dtype = tf$string,
+    trainable = TRUE
+  ) %>% 
+  layer_dense(units = 16, activation = "relu") %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+
+summary(model)
+```
+
+the layers are stacked sequentially to build the classifier:
+
+1.  The first layer is a TensorFlow Hub layer.
+    This layer uses a pre-trained Saved Model to map a sentence into its embedding vector.
+    The pre-trained text embedding model that we are using ([google/tf2-preview/gnews-swivel-20dim/1](https://tfhub.dev/google/tf2-preview/gnews-swivel-20dim/1)) splits the sentence into tokens, embeds each token and then combines the embedding.
+    The resulting dimensions are: (num_examples, embedding_dimension).
+
+2.  This fixed-length output vector is piped through a fully-connected (Dense) layer with 16 hidden units.
+
+3.  The last layer is densely connected with a single output node.
+    Using the sigmoid activation function, this value is a float between 0 and 1, representing a probability, or confidence level.
+
+```{r}
+model %>% 
+  compile(
+    optimizer = "adam",
+    loss = "binary_crossentropy",
+    metrics = "accuracy"
+  )
+```
+
+### Train the model
+
+```{r}
+model %>% 
+  fit(
+    imdb[[1]] %>% dataset_shuffle(10000) %>% dataset_batch(512),
+    epochs = 20,
+    validation_data = imdb[[2]] %>% dataset_batch(512),
+    verbose = 2
+  )
+```
+
+### Evaluate the model
+
+```{r}
+model %>% 
+  evaluate(imdb[[3]] %>% dataset_batch(512), verbose = 0)
+```
+
+This fairly naive approach achieves an accuracy of about 87%.
+With more advanced approaches, the model should get closer to 95%.

@@ -1,0 +1,433 @@
+---
+title: "Strings"
+author: "Bakro"
+date: "10/5/2021"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r  setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Basics
+
+```{r  }
+library(stringr)
+
+```
+
+```{r}
+firstname <- "abd" 
+lastname <- "alex"
+ cat(firstname, "\n", lastname, sep = "")
+```
+
+```{r}
+vec <- c(firstname,lastname)
+length(vec)
+summary(vec)
+attributes(vec)
+```
+
+```{r}
+vcNum <- formatC(c(100.23,2400.59), digits = 3, width = 4, flag = "0"); vcNum
+```
+
+The **stringr** package provides a set of internally consistent tools
+for working with character strings, i.e. sequences of characters
+surrounded by quotation marks.
+
+# Detect Matches
+
+## str_detect()
+
+str_detect(string, pattern, negate = FALSE)
+
+Detect the presence of a pattern match in astring. Also str_like().
+
+```{r}
+fruit <- c("apple","orange","kiwi","pear" ,"grapes")
+ind <- str_detect(fruit, "a")
+fruit[ind]
+```
+
+## str_starts()
+
+str_starts(string, pattern, negate = FALSE)
+
+Detect the presence of a pattern match at
+
+the beginning of a string. Also str_ends().
+
+```{r}
+str_starts(fruit, "a")
+```
+
+## str_which()
+
+str_which(string, pattern, negate = FALSE)
+
+Find the indexes of strings that contain
+
+a pattern match.
+
+```{r}
+str_which(fruit, "a")
+```
+
+## str_locate()
+
+str_locate(string, pattern) Locate the
+
+positions of pattern matches in a string.
+
+Also **str_locate_all().**
+
+```{r}
+str_locate(fruit, "a")
+```
+
+## str_count()
+
+str_count(string, pattern) Count the number
+
+of matches in a string. str_count(fruit, "a")
+
+```{r}
+fruit[6] <- "aa"
+ str_count(fruit, "a")
+```
+
+# Mutate Strings
+
+## str_sub()
+
+str_sub() \<- value. Replace substrings byidentifying the substrings
+with str_sub() and
+
+assigning into the results.
+
+```{r}
+fruitcopy <- c("apple","orange","kiwi","pear" ,"grapes")
+str_sub(fruitcopy, 1, 3)[] <- "str"  # add indecies 
+fruitcopy
+```
+
+## str_replace()
+
+str_replace(string, pattern, replacement)
+
+Replace the first matched pattern in each
+
+string. Also **str_remove()**.
+
+```{r}
+str_replace(fruit,"p","-") 
+str_replace(fruit,"p","")  # same str_remove
+str_remove(fruit,"p") 
+```
+
+## str_replace_all()
+
+str_replace_all(string, pattern, replacement)
+
+Replace all matched patterns in each string.
+
+Also **str_remove_all()**.
+
+```{r}
+str_replace_all(fruit, "p", "-")
+```
+
+## str_to_lower()
+
+str_to_lower(string, locale = "en")1
+
+Convert strings to lower case.
+
+```{r}
+str_to_lower(c("Fxy","YxZ"))
+```
+
+## str_to_upper()
+
+str_to_upper(string, locale = "en")1
+
+Convert strings to upper case.
+
+```{r}
+str_to_upper(c("Fxy","YxZ"))
+```
+
+## str_to_title()
+
+str_to_title(string, locale = "en")1 Convert
+
+strings to title case. Also str_to_sentence().
+
+```{r}
+str_to_title(c("Fxy","YxZ"))
+```
+
+## reverse string
+
+```{r}
+start <- proc.time()
+t <- 0L
+for (i in c(1L:10000L)) {
+  t <- t + i
+}
+end <- proc.time()
+print(t)
+print(end - start)
+```
+
+# Subset Strings
+
+## str_sub()
+
+str_sub(string, start = 1L, end = -1L) Extract
+
+substrings from a character vector.
+
+```{r}
+fruit
+str_sub(fruit, 1, 3)
+str_sub(fruit, -2)
+```
+
+## str_subset()
+
+str_subset(string, pattern, negate = FALSE)
+
+Return only the strings that contain a pattern match.
+
+```{r}
+str_subset(fruit, "p")
+```
+
+## str_extract()
+
+str_extract(string, pattern) Return the first
+
+pattern match found in each string, as a vector.
+
+Also str_extract_all() to return every pattern match.
+
+```{r}
+ str_extract(fruit, "[aeiou]")
+```
+
+## str_match()
+
+str_match(string, pattern) Return the
+
+first pattern match found in each string, as
+
+a matrix with a column for each ( ) group in
+
+pattern. Also str_match_all().
+
+```{r}
+str_match(sentences[1:5], "(a|the) ([^ +])")
+```
+
+# Join and Split
+
+## str_c()
+
+str_c(..., sep = "", collapse = NULL) Join
+
+multiple strings into a single string.
+
+```{r}
+str_c(letters, LETTERS)
+```
+
+## str_flatten()
+
+str_flatten(string, collapse = "") Combines
+
+into a single string, separated by collapse.
+
+```{r}
+str_flatten(fruit, ", ")
+```
+
+## str_dup()
+
+str_dup(string, times) Repeat strings times
+
+times. Also str_unique() to remove duplicates.
+
+```{r}
+str_dup(fruit, times = 2)
+```
+
+## str_split_fixed()
+
+str_split_fixed(string, pattern, n) Split a
+
+vector of strings into a matrix of substrings
+
+(splitting at occurrences of a pattern match).
+
+Also **str_split()** to return a list of substrings
+
+and **str_split_n()** to return the nth substring.
+
+```{r}
+str_split_fixed(sentences[1:3], " ", n=3) #tokens max =3
+str_split_fixed(sentences[1:3], " ", n= Inf) # all tokens 
+```
+
+## str_glue()
+
+str_glue(..., .sep = "", .envir = parent.frame())
+
+Create a string from strings and {expressions}
+
+to evaluate.
+
+```{r}
+str_glue("Pi is {pi}")
+```
+
+## str_glue_data()
+
+str_glue_data(.x, ..., .sep = "", .envir =
+
+parent.frame(), .na = "NA") Use a data frame,
+
+list, or environment to create a string from
+
+strings and {expressions} to evaluate.
+
+```{r}
+t<-str_glue_data(mtcars, "{rownames(mtcars)} has
+
+{hp} hp")
+t[1:5]
+```
+
+# Manage Lengths
+
+## str_length()
+
+str_length(string) The width of strings (i.e.
+
+number of code points, which generally equals
+
+the number of characters).
+
+ 
+
+```{r}
+ str_length(fruit)
+```
+
+## str_pad()
+
+str_pad(string, width, side = c("left", "right",
+
+"both"), pad = " ") Pad strings to constant
+
+width.
+
+```{r}
+str_pad(fruit, 17)
+```
+
+## str_trunc()
+
+str_trunc(string, width, side = c("right", "left",
+
+"center"), ellipsis = "...") Truncate the width
+
+of strings, replacing content with ellipsis.
+
+```{r}
+str_trunc(sentences[1:20], 6)
+```
+
+## str_trim()
+
+str_trim(string, side = c("both", "left", "right"))
+
+Trim whitespace from the start and/or end of
+
+a string.
+
+```{r}
+str_trim(str_pad(fruit, 17))
+```
+
+## str_squish()
+
+str_squish(string) Trim whitespace from each
+
+end and collapse multiple spaces into single spaces.
+
+```{r}
+str_squish(str_pad(fruit, 17, "both"))
+```
+
+# Order Strings
+
+## str_order()
+
+str_order(x, decreasing = FALSE, na_last =
+
+TRUE, locale = "en", numeric = FALSE, ...)1
+
+Return the vector of indexes that sorts a
+
+character vector.
+
+```{r}
+fruit[str_order(fruit)]
+```
+
+## str_sort()
+
+str_sort(x, decreasing = FALSE, na_last =
+
+TRUE, locale = "en", numeric = FALSE, ...)1
+
+Sort a character vector.
+
+```{r}
+str_sort(fruit,decreasing = TRUE)
+```
+
+# Helpers
+
+## str_conv()
+
+str_conv(string, encoding) Override the
+
+encoding of a string.
+
+```{r}
+str_conv(fruit,"ISO-8859-1")
+```
+
+## str_view_all()
+
+str_view_all(string, pattern, match = NA)
+
+View HTML rendering of all regex matches.
+
+Also **str_view()** to see only the first match.
+
+```{r}
+str_view_all(sentences[1:5], "[aeiou]")
+```
+
+

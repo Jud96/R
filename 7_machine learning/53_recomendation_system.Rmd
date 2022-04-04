@@ -1,0 +1,486 @@
+---
+title: "Recommandation_System"
+author: "Bakro"
+date: "12/4/2021"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## source
+
+[click here to go to source](https://anderfernandez.com/en/blog/how-to-code-a-recommendation-system-in-r/)
+
+## **Types of recommendation Systems**
+
+Basically there are two main types of recommendation systems:
+
+-   **Content-based recommendation syste**m: this system is based on using the features of the books in order to offer similar products. For example, if I'm a huge fan of John Verdon, the system will recommend other books of the same author or books within the same category. [apuestas deportivas Colombia](https://periodistas-es.com/por-que-hay-tantos-apostadores-en-colombia-143952)
+
+-   Collaborative Recommendation System. This case does not use the features of the products, but rather the opinions of the users. There are two main types of collaborative recommendation systems:
+
+    -   **User-based collaborative system**: it is based on finding similar users and find the items those users have liked but we haven't tried yet.
+
+    -   **Item-based collaborative system**: in this case, we will find similar products to the one the user has bought and we will recommend those products that are similar to those which has ratted as best.
+
+Besides, two systems could also be combined, creating hybrid models, as in the case of ensemble models in Machine Learning.
+
+### **Loading data to build a book recommendation system**
+
+In order to code a recommendation system in R, the first thing that we need is data. In my case, I will not use the typical MovieLens dataset. Instead, I will use a book dataset, as I find it much more real. Anyway, if you want to try with another dataset, check out this page.
+
+```{r echo=FALSE}
+# url = "http://www2.informatik.uni-freiburg.de/~cziegler/BX/BX-CSV-Dump.zip"
+# download.file(url, destfile = "data.zip")
+# dir.create("data")
+# unzip("data.zip",exdir = "data")   
+# 
+# files = paste0("data/",list.files("data"))
+
+ratings = read.csv("data/BX-Book-Ratings.csv", sep = ";" ,stringsAsFactors = TRUE)
+books = read.csv("data/BX-Books.csv" , sep = ";",stringsAsFactors = TRUE)
+users = read.csv("data/BX-Users.csv", sep = ";",stringsAsFactors = TRUE)
+
+```
+
+### **Understanding the data**
+
+#### **Understanding book data**
+
+```{r}
+library(dplyr)
+
+### inform about data
+
+### select interested column data
+### Answer Book.Title,Book.Author,Year.Of.Publication,Publisher
+
+## see structure of data
+glimpse(books)
+## verify type of vars
+
+
+# Anyway, in order to generate more realistic data, we will include a new variable called ‘Category’. This variable will indicate if the book belongs to any of the following categories: Action and Adventure,Classic,Detective and Mystery,Fantasy
+
+set.seed(1234)
+categories = c("Action and Adventure","Classic","Detective and Mystery","Fantasy")
+books$category = sample( categories, nrow(books), replace=TRUE, prob=c(0.25, 0.3, 0.25, 0.20))
+books$category = as.factor(books$category)
+
+rm(categories)
+
+
+
+```
+
+Besides, I will apply a small transformation: I will add the caracters 'Id' to all the ISBNs and User-Ids. I do this because at some point we will construct matrixes data have ISBNs or User-Ids as column or row names. As they all begin with a number, R would include an X before the column/row name. Adding this 'Id' strings will avoid this to happen.
+
+```{r}
+books$ISBN = paste0("Isbn.",books$ISBN)
+users$User.ID = paste0("User.",users$User.ID)
+ratings$ISBN = paste0("Isbn.",ratings$ISBN)
+ratings$User.ID = paste0("User.",ratings$User.ID)
+```
+
+#### **Knowing rating data**
+
+```{r}
+library(ggplot2)
+
+ratings %>%
+  group_by(Book.Rating) %>%
+  summarize(cases = n()) %>%
+  ggplot(aes(Book.Rating, cases)) + geom_col() +
+  theme_minimal() + scale_x_continuous(breaks = 0:10) 
+
+# table(ratings$Book.Rating)
+# hist(ratings$Book.Rating)
+```
+
+ask : is that 0 missing values ??
+
+```{r warning=FALSE}
+library(ggplot2)
+# As we can see, there are a lot of zeros. This is a little weird, and it might indicate the absence of rating (a person has read the book but has not rate it). Thus, we will just get with the recommendations that are non-zero.
+ratings = ratings[ratings$Book.Rating!= 0, ]
+ratings %>%
+  group_by(Book.Rating) %>%
+  summarize(cases = n()) %>%
+  ggplot(aes(Book.Rating, cases)) + geom_col() +
+  theme_minimal() + scale_x_continuous(breaks = 0:10)
+
+```
+
+```{r}
+# Finally, let’s see how much each person scores:
+
+ratings_sum = ratings %>%
+  group_by(User.ID) %>%
+  count() 
+
+summary(ratings_sum$n)
+boxplot(ratings_sum$n)
+ggplot(ratings_sum , aes (x = n)) + geom_histogram() + scale_x_log10()
+```
+
+```{r}
+# As we can see, 75% of users have given 3 recommendations or less. We are going to remove these people to keep only more significant users and, thus, reduce computing needs:
+user_index = ratings_sum$User.ID[ratings_sum$n>4]
+
+users = users[users$User.ID %in% user_index, ]
+ratings = ratings[ratings$User.ID %in% user_index, ]
+books = books[books$ISBN %in% ratings$ISBN,]
+
+rm(ratings_sum, user_index)
+```
+
+## **How to code a content based recommendation system in R**
+
+### **Calculating dissimilarity between books**
+
+A content-based recommendation system uses product characteristics to find similar products.
+
+As we have seen previously, in our case we have different characteristics of the books: book title, year, author, publisher and category. However, are all these characteristics relevant to the user?
+
+The title of the book, for example, seems like it's not a very good feature for a recommendation. Perhaps, if we had the description we could do an analysis of the text to find the keywords of the description. That would be something that could make sense, but the title... I don't think so, so we drop it.
+
+In my opinion, the year can also be misleading: I would not buy a book because it is the same year as one that I liked. Perhaps it is something that only makes sense once certain conditions are met... In any case, in my case I have also removed it.
+
+Therefore, we are left with the variables: Author, Publisher and Category. But... how can we know how similar two products are based on some categories? For that, we have to **calculate distances**.
+
+The form of distance we can calculate will largely depend on the types of data we have. There are basically three options:
+
+-   **All data is numeric**: in this case we could normalize the data and use the Euclidean distance to calculate the distances. This is something we saw when we programmed the [K-means algorithm from scratch in R](https://anderfernandez.com/en/blog/code-k-means-from-scratch-in-r/).
+
+-   **You have both numerical and categorical data**. In this case you should use the Gower distance. This can be found in the `daisy` function of the `cluster` package ([link](https://www.rdocumentation.org/packages/cluster/versions/2.1.0/topics/daisy)).
+
+-   **All data is categorical:** there are different ways to calculate distances in these cases. However, according to this study, there are no big differences between all of them, so you could use any type of common measurement.
+
+In our case, all the data is categorical. However, we will use the Gower distance, which in our case also works and, thus, you also know how it would be done in case we also include numerical data (such as the year). Let's see how it works:
+
+```{r eval=FALSE}
+library(cluster)
+
+books_distance = books[,c("ISBN","Book.Author","Publisher")] 
+books_distance$ISBN <- as.factor(books_distance$ISBN)
+dissimilarity = daisy(books_distance, metric = "gower")
+```
+
+As we can see, we cannot calculate distances. Why? Well, because this formula calculates the distance between all the elements. Therefore, the result is a matrix of `n x n`, where n is the number of different books that we have.
+
+In our case we have 115246 different books, so we would have to make a 115246 x 115246 matrix. This is something too heavy to work locally. In fact, if we try to create it, we will see how it returns the same error:
+
+```{r eval=FALSE}
+tryCatch(
+  {matrix(ncol = 115246, nrow = 115246)},
+ 
+)
+# can't allocate vector of size 49.5 Gb Execution halted
+```
+
+Here we run into **one of the main problems with content-based recommendation systems**: **they are very difficult to scale** and use with many products. By itself this is already a drawback to be able to use them ... Anyway, let's see how they work.
+
+To avoid this problem, we are going to take only 10,000 books by the most common authors to see how they work. In addition, we are going to give a weight to each variable, in such a way that two books are more alike because they are by the same author than because they are from the same publisher.
+
+```{r}
+library(dplyr)
+library(cluster)
+book_feature = books[1:10000,c("Book.Author","Publisher","category")] 
+
+dissimilarity = daisy(book_feature, metric = "gower", weights = c(2,0.5,1))
+dissimilarity = as.matrix(dissimilarity)
+
+row.names(dissimilarity)<-  books$ISBN[1:10000]
+colnames(dissimilarity)<- books$ISBN[1:10000]
+
+dissimilarity[15:20,15:20]
+```
+
+As you can see, **the matrix has mainly two values: 0 and 1**, 0 being the least degree of dissimilarity and 1 being the maximum degree. Be careful, **we are talking about dissimilarity**, so if the value is 0, it means that those books are the same, while if it is 1, they have nothing in common.
+
+As we can see, of all the books that we have printed out, we see that there are books that have things in common: 0684823802 is similar to 0345402871 and 0345402871 looks like 0345417623.
+
+Basically, under the hood this recommendation systems recommends books that are:
+
+1.  Written by the same author, publisher and category.
+
+2.  Written by the same author and category.
+
+3.  That they are only written by the same author.
+
+4.  They are on the same category and are of the same publisher.
+
+5.  That they are only of the same category.
+
+6.  That they are only from the same publisher.
+
+Now that we have the distance between books and we know how this recommendation system works.... Let's see which book we recommend to a user!
+
+### **Code content-based recommendation system in R**
+
+To get the recommendations for a user, we are going to need the books that a user has read and rated. After that, we can search for books that look like those books. In addition, we must bear in mind that we do not have all the books, but only a sample of them, since we have stayed with the 10,000 most famous authors.
+
+Anyway, we are going to choose a user and keep the books they have read. We will apply the algorithm on these books:
+
+```{r}
+user_id = "User.1167"
+
+user_books = ratings %>%
+  filter(User.ID == user_id & ISBN %in% books$ISBN[1:10000]) %>%
+  arrange(desc(Book.Rating))
+
+head(user_books,10)
+```
+
+With this in mind, we are going to find the books that most resemble these two copies:
+
+```{r}
+library(tidyr)
+
+books$ISBN = as.character(books$ISBN)
+selected_books = user_books[ ,c("ISBN", "Book.Rating")]
+
+recomendar = function(selected_books, dissimilarity_matrix, 
+                      books, n_recommendations = 5){
+
+  selected_book_indexes = which(colnames(dissimilarity_matrix) %in% selected_books$ISBN)
+
+
+  results = data.frame(dissimilarity_matrix[, selected_book_indexes], 
+                       recommended_book = row.names(dissimilarity_matrix),
+                       stringsAsFactors = FALSE) 
+
+
+  recomendaciones = results %>%
+    pivot_longer(cols = c(-"recommended_book") , names_to = "readed_book", 
+                 values_to = "dissimilarity") %>%
+      left_join(selected_books, by = c("recommended_book" = "ISBN"))%>%
+    arrange(desc(dissimilarity)) %>%
+    filter(recommended_book != readed_book) %>%
+    filter(!is.na(Book.Rating) ) %>%
+    mutate(
+      similarity = 1 - dissimilarity,
+      weighted_score = similarity * Book.Rating) %>%
+    arrange(desc(weighted_score)) %>%
+    filter(weighted_score>0) %>%
+    group_by(recommended_book) %>% slice(1) %>%
+    top_n(n_recommendations, weighted_score)  %>%
+    left_join(books, by = c("recommended_book" = "ISBN"))
+
+  return(recomendaciones)
+}
+
+recomendaciones = recomendar(selected_books, dissimilarity, books)
+recomendaciones
+```
+
+And with this... we have already created our content-based recommendation system! As you can see, we recommend several similar books to the user for having read the book 0060929596.
+
+We are going to create a function that allows us to visualize it in an easier way:
+
+```{r}
+library(jpeg)
+visualizar_recomendacion = function(recomendation,
+                                     recommended_book, image, n_books = 5){
+
+  if(n_books > nrow(recomendation)) {n_books = nrow(recomendation)}
+
+  plot = list()
+
+  dir.create("content_recommended_images")
+  for(i in 1:n_books){
+    # Create dir & Download the images
+    img = pull(recomendation[i,which(colnames(recomendation) == image)])
+    name = paste0("content_recommended_images/",i,".jpg")
+    suppressMessages(
+      download.file(as.character(img), destfile = name ,mode = "wb") 
+    )
+
+    # Assign Objetc
+    print(name)
+    plot[[i]] = grid::rasterGrob(readJPEG(name))
+  }
+
+    do.call(gridExtra::marrangeGrob, args = list(plot, ncol = n_books, nrow = 1, top=""))
+
+}
+
+visualizar_recomendacion(recomendaciones, "recommended_book","Image.URL.M")
+
+
+raster::raster
+```
+
+## **How to code a collaborative recommendation system in R**
+
+The recommendation system based on the user or collaborative filter consists of **using the ratings of the users about the products in order to recommend** books to you. More specifically, **there are two main types** of collaborative recommendation systems.
+
+-   **Item-based collaborative recommendation system**: in this case we are going to look for the **similarity between the products taking into account the ratings they obtain**. Once we have this, we will look for products similar to those that the user has already bought and we will recommend them.
+
+-   **User-based collaborative recommendation system**: in this case we are going to look for the similarity between users. Once we have it, we will find the n users closest to the person we want to recommend something to. Thus, we will search for products that people similar to our user like, but that our user has not tried. Those are the products we will recommend.
+
+Now that we intuitively know how these two recommendation systems work, let's code them in R!
+
+### **Code item-based recommendation system in R**
+
+To code both item-based and user-based collaborative recommendation system, we first need to create the User-Product matrix. We can do this easily with the `pivot_wider` function from `tidyr`.
+
+```{r}
+user_item = ratings %>%
+  top_n(10000) %>%
+  pivot_wider(names_from = ISBN,values_from = Book.Rating) %>%
+  as.data.frame()
+
+row.names(user_item) = user_item$User.ID
+user_item$User.ID = NULL
+
+user_item = as.matrix(user_item)
+
+user_item[1:5,1:5]
+```
+
+However, we see how this has a problem: there is a lot of NA. If you think about it, it is normal, since a user will only read a few books of all those that are available.
+
+In any case, having many NAs is called `sparsity`. We can calculate the degree of sparsity as follows:
+
+```{r}
+sum(is.na(user_item)) /  ( ncol(user_item) * nrow(user_item) )
+```
+
+As you can see we have a very sparse matrix, since 99.96% of the cells lack data. This is something that limits us quite a bit in order to act, since from this matrix we must find the similarity between products.
+
+For this, there are different formulas: cosine similarity, Pearson's correlation coefficient, Euclidean distance... In our case we will use the cosine similarity.
+
+The formula of the cosine similarity is as follows:
+
+```{r}
+cos_similarity = function(A,B){
+  num = sum(A *B, na.rm = T)
+  den = sqrt(sum(A^2, na.rm = T)) * sqrt(sum(B^2, na.rm = T)) 
+  result = num/den
+
+  return(result)
+}
+```
+
+Now that we have coded the cosine function, we can apply this function to all the items and thus obtain the Product-Product matrix.
+
+However, it is not something that we are going to apply to all items, but only to the item from which we want to find similar products. Why? Because, once again, calculating the item-item matrix is computationally very demanding and would require a lot of time and memory.
+
+So, we create a function to calculate the similarity only on the product id that we choose.
+
+```{r}
+item_recommendation = function(book_id, rating_matrix = user_item, n_recommendations = 5){
+
+  book_index = which(colnames(rating_matrix) == book_id)
+
+  similarity = apply(rating_matrix, 2, FUN = function(y) 
+                      cos_similarity(rating_matrix[,book_index], y))
+
+  recommendations = tibble(ISBN = names(similarity), 
+                               similarity = similarity) %>%
+    filter(ISBN != book_id) %>% 
+    top_n(n_recommendations, similarity) %>%
+    arrange(desc(similarity)) 
+
+  return(recommendations)
+
+}
+
+recom_cf_item = item_recommendation("Isbn.0446677450")
+recom_cf_item
+```
+
+```{r}
+recom_cf_item = recom_cf_item %>%
+  left_join(books, by = c("ISBN" = "ISBN")) 
+
+visualizar_recomendacion(recom_cf_item[!is.na(recom_cf_item$Book.Title),],
+                         "ISBN",
+                         "Image.URL.M"
+                         )
+```
+
+### **How to code user-based collaborative recommendation system in R**
+
+To code a user-based collaborative recommendation system we will start from the User-Item matrix. Only that, in this case, instead of calculating the distances at the column level, we will do it at the row level.
+
+```{r}
+user_recommendation = function(user_id, user_item_matrix = user_item,
+                               ratings_matrix = ratings,
+                               n_recommendations = 5,
+                               threshold = 1,
+                               nearest_neighbors = 10){
+
+  user_index = which(rownames(user_item_matrix) == user_id)
+
+  similarity = apply(user_item_matrix, 1, FUN = function(y) 
+                      cos_similarity(user_item_matrix[user_index,], y))
+
+  similar_users = tibble(User.ID = names(similarity), 
+                               similarity = similarity) %>%
+    filter(User.ID != user_id) %>% 
+    arrange(desc(similarity)) %>%
+    top_n(nearest_neighbors, similarity)
+
+
+  readed_books_user = ratings_matrix$ISBN[ratings_matrix$User.ID == user_id]
+
+  recommendations = ratings_matrix %>%
+    filter(
+      User.ID %in% similar_users$User.ID &
+      !(ISBN %in% readed_books_user)) %>%
+    group_by(ISBN) %>%
+    summarise(
+      count = n(),
+      Book.Rating = mean(Book.Rating)
+    ) %>%
+    filter(count > threshold) %>%
+    arrange(desc(Book.Rating), desc(count)) %>%
+    head(n_recommendations)
+
+  return(recommendations)
+
+}
+
+recom_cf_user = user_recommendation("User.99", n_recommendations = 20)
+recom_cf_user
+```
+
+We have just coded our user-based collaborative recommendation system in R. Basically, this system looks for similar people and finds those books that similar people have recommended but we have not read. Those are the books that we have recommended to the user. Let's see them!
+
+```{r}
+recom_cf_user = recom_cf_user %>%
+  left_join(books, by = c("ISBN" = "ISBN"))
+
+visualizar_recomendacion(recom_cf_user[!is.na(recom_cf_user$Book.Title),],
+                         "ISBN","Image.URL.M")
+```
+
+We have just coded three different types of recommendation systems. But, when should we use each one of them? Let's see it!
+
+## **When to use different recommendation system**
+
+To better understand when to use each of the three recommendation systems that we have learned to program, it is important to understand what each of the recommendation systems assumes.
+
+On the one hand, **user-based recommendation system considers that the user may also like what others have liked**. This system assumes that **user tastes do not change over time**: what I loved 1 year ago will continue to enchant me.
+
+However, while this hypothesis may make sense when we talk about books or movies, in other cases, such as clothing, it will surely fail more. Therefore, although it is one of the most used recommendation systems, **it is important to consider how users' opinion of products changes over time before using this type of recommendation system**.
+
+On the other hand, the **item-based recommendation system** **is more robust**. And it is that, after there are many initial recommendations, it is very difficult for the average rating of an item to be affected.
+
+Therefore, as a general rule, i**f we have more users than items and if the ratings do not change much over time, we would use item-based recommendation system**. Otherwise, we would use user-based recommendation systems.
+
+Finally, regarding the content-based recommendation system... although it is not usually the most optimal recommendation system, it could make sense when the items have many independent variables that affect the user's rating.
+
+In any case, and as we have seen when preparing it, it has many limitations, from the type of content it recommends to the computational capacity it requires.

@@ -1,0 +1,170 @@
+---
+title: "Shiny_App_Project 11/17/2021"
+
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+library(shiny)
+library(ggplot2)
+library(plotly)
+mtcars$am <-as.factor(mtcars$am)
+mtcars$cyl<- as.factor(mtcars$cyl)
+# Define UI for random distribution app ----
+vars <- colnames(mtcars)
+ui <- fluidPage(
+
+  # App title ----
+  titlePanel("Tabsets"),
+   h4("this app provide an easy UI to choose a variable and draw plotly graph for one variable and generate codeif variable is factor provide pie chart else if varible is numeric provide you a histogram / boxplot or density in addition to code"),
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+
+      # Input: Select the random distribution type ----
+      selectInput("var", "select variable :",
+                    choices = vars),
+
+      # br() element to introduce extra vertical spacing ----
+      br(),
+
+      # Input: Slider for the number of observations to generate ----
+      selectInput("graph_type","select graph :", mychoices <- c("histogram" ,"boxplot")
+                  )
+
+    ),
+
+    # Main panel for displaying outputs ----
+    mainPanel(
+
+      # Output: Tabset w/ plot, summary, and table ----
+      tabsetPanel(type = "tabs",
+                  tabPanel("Plot", plotlyOutput("plot")),
+                  tabPanel("code",htmlOutput("code"))
+      )
+
+    )
+  )
+)
+
+# Define server logic for random distribution app ----
+server <- function(input, output,session) {
+
+  
+   observeEvent(input$var,{
+     if(is.factor(mtcars[,input$var])){ mychoices <- c("pie") }
+     else {(mychoices <- c("histogram" ,"boxplot","density"))}
+    cat(is.factor(mtcars[,input$var]))
+     cat(input$var)
+   updateSelectInput(session,'graph_type',
+           choices= mychoices)
+ }) 
+
+
+  d <- reactive({
+    switch(input$graph_type,
+                   pie = "pie",
+                   histogram = "geom_histogram",
+                   boxplot = "boxplot",
+                   density ="density"
+                   )
+
+    
+  })
+
+  output$plot <- renderPlotly({
+   cat(d())
+    if(d() == "pie"){
+      
+
+
+df_graph <- as.data.frame(table(mtcars[,input$var]))
+fig <- plot_ly(df_graph, labels = ~Var1, values = ~Freq, type = 'pie')
+# fig <- fig %>% layout(title = 'colors',
+#          xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+#          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+
+# df_graph <- as.data.frame(table(mtcars[,input$var]))
+# pie <- ggplot(df_graph, aes(x = "", y=df_graph[,2], fill = factor(df_graph[,1]))) + 
+# geom_bar(width = 1, stat = "identity") +
+#   theme(axis.line = element_blank(), 
+#         plot.title = element_text(hjust=0.5)) +
+#     labs(fill=NULL, 
+#        x=NULL, 
+#        y=NULL, 
+#        title=NULL, 
+#        caption=NULL)
+# 
+# pie + coord_polar(theta = "y", start=0) +scale_y_continuous(breaks=cumsum
+# (df_graph$Freq) - df_graph$Freq / 2, labels= df_graph$Var1)                         
+                         
+ 
+                         } else if(d() == "geom_histogram")
+    {
+      plotly::ggplotly(ggplot(data = mtcars , aes(x=mtcars[,input$var])) + geom_histogram())
+    }else if(d() == "boxplot")
+    {
+      # ggplot(data = mtcars , aes(x=mtcars[,input$var])) + geom_boxplot()
+      # plotly::ggplotly(ggplot(data = mtcars , aes(x=mtcars[,input$var])) + geom_boxplot())
+      fig <- plot_ly(y = ~mtcars[,input$var], type = "box")
+      fig
+    }else if(d() == "density")
+    {
+       plotly::ggplotly(ggplot(data = mtcars , aes(x=mtcars[,input$var])) + geom_density())
+    }
+
+    
+ 
+  })
+  
+  
+  
+  output$code <- renderUI({
+  
+    if(d() == "pie"){
+
+  HTML( paste(paste("df_graph <- as.data.frame(table(mtcars[,",input$var , "])) ")  ,
+         "fig <- plot_ly(df_graph, labels = ~Var1, values = ~Freq, type = 'pie')", 
+            "fig ",
+         sep = "<br/>"
+         ))
+             
+    } else if(d() == "geom_histogram")
+    {
+      paste(" plotly::ggplotly(ggplot(data = mtcars , aes(x=mtcars[,",input$var,"])) +                                 geom_histogram())"  ) 
+    }else if(d() == "boxplot")
+    {
+      paste("fig <- plot_ly(y = ~mtcars[,",input$var,"], type = \"box\")"  ) 
+    }else if(d() == "density")
+    {
+      paste(" plotly::ggplotly(ggplot(data = mtcars , aes(x=mtcars[,",input$var,"])) + geom_density())"  ) 
+    }
+
+    
+ 
+  })
+
+
+}
+
+# Create Shiny app ----
+ shinyApp(ui, server)
+# shiny::runUrl(url = "https://z4ad3g-abdulmajid-bakro.shinyapps.io/plotly_graphs/")
+# shiny::runUrl("https://z4ad3g-abdulmajid-bakro.shinyapps.io/plotly_graphs/")
+# <!-- https://z4ad3g-abdulmajid-bakro.shinyapps.io/plotly_graphs/ -->
+```
+
+
+

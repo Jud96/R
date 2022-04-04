@@ -1,0 +1,296 @@
+---
+title: "prepare case"
+author: "Bakro"
+date: "10/12/2021"
+output: html_document
+---
+
+# prepare Case
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+print("This file was created within RStudio")
+print("And now it lives on GitHub")
+```
+
+## deal with files
+
+```{r eval=FALSE}
+getwd()  # current working directory
+ls()     # local object workspace
+list.files() # files in current directory 
+dir() # files in current directory 
+?list.files   # help method
+args(list.files) # argument in this method
+old.dir <- getwd() # save current directory
+dir.create("testdir") # create directory in current directory
+setwd("testdir") # change directory
+file.create("mytest.R") # create R file 
+file.exists("mytest.R")  # if file exists in current directory 
+file.info("mytest.R")  # info about fie size ,isdir,time ,exe
+file.rename("mytest.R","mytest2.R") # rename file
+file.copy("mytest2.R","mytest3.R") # copy 
+file.path("mytest3.R")  # path of file
+?dir.create             # help 
+# create testdir2 and subfolder testdir3
+dir.create(file.path("testdir2", "testdir3"), recursive = TRUE)
+setwd(old.dir) # return to directory 
+
+```
+
+<div>
+
+calculate required space for memory (remember basics)
+
+</div>
+
+**Reading data**
+
+## load & save
+
+```{r eval=FALSE}
+load(url("http://dwoll.de/rKompakt/dat.Rdata"))    # datL, datW, subW
+
+path <- paste0(getwd(), "/Woll2.Rdata")
+
+save(datL, datW, subW, file = vcFile)
+
+rm(datL, datW, subW)
+
+path <- paste0(getwd(), "/Woll2.Rdata")
+
+load(vcFile)
+```
+
+## download from internet
+
+```{r eval=FALSE}
+fileurl <- "..."
+download.file(fileurl,destfile = "...", method = "curl") # https so that md :curl 
+list.files("./data")
+```
+
+## source(), dump() bzw. dput(), dget()
+
+```{r eval = FALSE}
+dfData <- data.frame(PersID = paste("P", 1:4, sep = ""), 
+                     Initials = c("AB", "CD", "EF", "GH"), 
+                     Smoker = c("N", "N", "Y", "Y"), 
+                     Age = c(10, 19, 11, 14))
+
+# ... und ein weiteres Objekt:
+
+string <- " welcome here"
+
+vcFile = paste0(getwd(), "/Data_dump.R")
+#con <- file(vcFile, "r")	
+
+dump(c("string", "dfData"), file = vcFile)
+#close(con)
+
+rm(string, dfData)
+## as module or library that include functions,data ,..
+source(vcFile)
+
+string
+dfData
+```
+
+## dput() und dget()
+
+```{r eval =FALSE}
+dput(dfData)  # show structure of  Data.Frames
+
+vcFile = paste(vcDir, "Data_dput.R", sep = "")
+
+dput(dfData, file = vcFile)
+
+dfDataNew <- dget(vcFile)
+
+dfDataNew
+```
+
+## unstructure data
+
+```{r eval =FALSE}
+vcFile <- paste(vcDir, "TextData.txt", sep = "")
+vcText <- readLines(vcFile)
+vcText
+
+# Inhalt eines Character-Vektors in einen Textfile schreiben
+vcFile <- paste(vcDir, "TextDataCopy.txt", sep = "")
+writeLines(vcText, vcFile, sep = "\n")
+```
+
+```{r eval =FALSE}
+vcHTML <- readLines(url("https://www.infoq.com/news/", "r"))
+vcFile <- paste(vcDir, "infoq.html")
+writeLines(vcHTML,vcFile)
+```
+
+## read.table / read.csv
+
+```{r eval =FALSE}
+vcFile <- paste(vcDir, "TabData01.txt", sep = "")
+
+dfDaten <- read.table(vcFile, 
+                      header = TRUE, sep = ",", 
+                      stringsAsFactors = TRUE )
+
+vcFile <- paste(vcDir, "TabData02.txt", sep = "")
+
+write.table(dfDaten, file = vcFile)
+```
+
+## Excel files
+
+```{r eval = FALSE}
+library(xlsx)
+colIndex <- 2:3
+rowIndex <- 1:4
+data <- read.xlsx ("..." , sheetIndex = 1,header = TRUE
+                   ,colIndex = colIndex ,rowIndex = rowIndex )
+```
+
+## Reading with DB (Mysql)
+
+```{r eval =FALSE}
+# sql reading   -----------------------------------------------------------------
+# download packages and load it to programm
+install.packages("DBI")
+install.packages("RMySQL")
+library(DBI)
+library(RMySQL)
+# first open mysql and change password usnig 
+# ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';
+
+
+con <-  dbConnect(MySQL(), user = 'root', password = 'root', dbname = 'mydb',host = '127.0.0.1')
+t <- dbListTables(con)  # return tables 
+dbListFields(con,t[1]) # know fields name for table
+query <- paste("select * from ",t[1])
+rs <-  dbSendQuery(con, query )
+data = fetch(rs, n=-1) # fetch data 
+```
+
+## Reading from HDF5
+
+***see video !!***
+
+## Reading from webpages
+
+***see more for more info !!***
+
+```{r eval =FALSE}
+con = url("address")
+htmlcode = readLines(con)
+close(con)
+```
+
+## parsing with XML
+
+more info in course 3 (R Getting and clean )
+
+```{r eval =FALSE}
+library(XML)
+library(methods)
+require(XML)
+# https://www.w3schools.com/xml/simple.xml
+result <- xmlParse(file = "data/simple.xml")
+print(result)
+ rootNode <- xmlRoot(result)
+ names(rootNode)
+ rootNode[[1]]
+  rootNode[[1]][[1]]
+xpathSApply(rootNode , "//name" ,xmlValue)
+xpathSApply(rootNode , "//price" ,xmlValue)
+```
+
+
+## Reading json
+
+```{r eval =FALSE}
+library(jsonlite)
+jsondata <- fromJSON("https://api.github.com/users/jtleek/repos")
+names(jsondata)
+names(jsondata$owner)
+jsondata$owner$login
+
+
+myjson <- toJSON(iris, pretty = TRUE)
+cat(myjson)
+
+iris5 <- fromJSON(myjson)
+```
+
+Reading From APIs
+
+for example accessing Twitter from R and than convert json object
+
+## reading from other packages
+
+read.foo
+
+```{r eval =FALSE}
+read.arff(Weka)
+read.dta(Stata)
+read.mtp(Minitab)
+read.octave(Octave)
+read.spss(SPSS)
+read.xport(SAS)
+```
+
+## read big data
+
+```{r eval =FALSE}
+library(data.table)
+big_df <- data.frame(x =rnorm(1000000), y = rnorm(1000000))
+file <- tempfile()
+write.table(big_df,file = file ,row.names = FALSE ,sep = ":",quote = FALSE)
+system.time(fread(file))
+```
+
+```{r eval =FALSE}
+system.time(read.table(file,header = TRUE,sep = ":"))
+```
+
+```{r eval =FALSE}
+t <- download.file("https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06hid.csv")
+```
+
+## connection
+
+```{r eval =FALSE}
+vcFile <- paste(vcDir, "TextData.txt", sep = "")
+
+conObj <- file(vcFile, "r")			# Open connection, read only
+vcTextData <- readLines(conObj); vcTextData
+close(conObj)					         # Close connectin
+
+vcFile <- paste(vcDir, "TextDataCopy.txt")
+conObj <- file(vcFile, "w")
+writeLines(vcTextData, conObj)
+close(conObj)
+```
+
+# Example
+
+```{r eval =FALSE}
+library(sqldf)
+fileUrl <- "https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06pid.csv"
+download.file(fileUrl, destfile = "acs.csv")
+acs <- read.csv("acs.csv")
+head(acs)
+#detach("package:RMySQL", unload=TRUE)
+sqldf("select pwgtp1 from acs where AGEP < 50")
+```
+
+```{r}
+htmlUrl <- url("http://biostat.jhsph.edu/~jleek/contact.html")
+htmlCode <- readLines(htmlUrl)
+close(htmlUrl)
+c(nchar(htmlCode[10]), nchar(htmlCode[20]), nchar(htmlCode[30]), nchar(htmlCode[100]))
+```

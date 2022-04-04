@@ -1,0 +1,736 @@
+---
+title: "39_keras_advanced_overview"
+author: "Bakro"
+date: "1/4/2022"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## overview
+
+```{r warning=FALSE}
+library(keras)
+library(tfdatasets)
+library(tfautograph)
+library(tensorflow)
+library(reticulate)
+library(purrr)
+```
+## laod data
+```{r}
+mnist <- dataset_mnist()
+mnist$train$x <- mnist$train$x/255
+mnist$test$x <- mnist$test$x/255
+
+dim(mnist$train$x) <- c(dim(mnist$train$x), 1)
+dim(mnist$test$x) <- c(dim(mnist$test$x), 1)
+```
+##  batch and shuffle the dataset.
+```{r}
+# Now let’s use tfdatasets to batch and shuffle the dataset.
+
+train_ds <- mnist$train %>% 
+  tensor_slices_dataset() %>%
+  dataset_take(20000) %>% 
+  dataset_map(~modify_at(.x, "x", tf$cast, dtype = tf$float32)) %>% 
+  dataset_map(~modify_at(.x, "y", tf$cast, dtype = tf$int64)) %>% 
+  dataset_shuffle(10000) %>% 
+  dataset_batch(32)
+
+test_ds <- mnist$test %>% 
+  tensor_slices_dataset() %>% 
+  dataset_take(2000) %>% 
+  dataset_map(~modify_at(.x, "x", tf$cast, dtype = tf$float32)) %>%
+  dataset_map(~modify_at(.x, "y", tf$cast, dtype = tf$int64)) %>% 
+  dataset_batch(32)
+```
+
+##  Keras custom mode
+```{r}
+# We will now define a Keras custom model.
+
+simple_conv_nn <- function(filters, kernel_size) {
+  keras_model_custom(name = "MyModel", function(self) {
+    
+    self$conv1 <- layer_conv_2d(
+      filters = filters, 
+      kernel_size = rep(kernel_size, 2),
+      activation = "relu"
+    )
+    
+    self$flatten <- layer_flatten()
+    
+    self$d1 <- layer_dense(units = 128, activation = "relu")
+    self$d2 <- layer_dense(units = 10, activation = "softmax")
+    
+    
+    function(inputs, mask = NULL) {
+      inputs %>% 
+        self$conv1() %>% 
+        self$flatten() %>% 
+        self$d1() %>% 
+        self$d2()
+    }
+  })
+}
+
+model <- simple_conv_nn(filters = 32, kernel_size = 3)
+```
+## compile model
+```{r}
+# We can then choose an optimizer and loss function for training:
+
+loss <- loss_sparse_categorical_crossentropy
+optimizer <- optimizer_adam()
+# Select metrics to measure the loss and the accuracy of the model. These metrics accumulate the values over epochs and then print the overall result.
+
+train_loss <- tf$keras$metrics$Mean(name='train_loss')
+train_accuracy <-  tf$keras$metrics$SparseCategoricalAccuracy(name='train_accuracy')
+
+test_loss <- tf$keras$metrics$Mean(name='test_loss')
+test_accuracy <- tf$keras$metrics$SparseCategoricalAccuracy(name='test_accuracy')
+```
+## training step
+```{r}
+# We then define a function that is able to make one training step:
+
+train_step <- function(images, labels) {
+  
+  with (tf$GradientTape() %as% tape, {
+    predictions <- model(images)
+    l <- loss(labels, predictions)
+  })
+  
+  gradients <- tape$gradient(l, model$trainable_variables)
+  optimizer$apply_gradients(purrr::transpose(list(
+    gradients, model$trainable_variables
+  )))
+  
+  train_loss(l)
+  train_accuracy(labels, predictions)
+  
+}
+```
+## test step
+```{r}
+# We then provide a function that is able to test the model:
+
+test_step <- function(images, labels) {
+  predictions <- model(images)
+  l <- loss(labels, predictions)
+  
+  test_loss(l)
+  test_accuracy(labels, predictions)
+}
+```
+## training_loop
+```{r}
+# We can then write our training loop function:
+
+training_loop <- tf_function(autograph(function(train_ds, test_ds) {
+  
+  for (b1 in train_ds) {
+    train_step(b1$x, b1$y)
+  }
+  
+  for (b2 in test_ds) {
+    test_step(b2$x, b2$y)
+  }
+  
+  tf$print("Acc", train_accuracy$result(), "Test Acc", test_accuracy$result())
+  
+  train_loss$reset_states()
+  train_accuracy$reset_states()
+  test_loss$reset_states()
+  test_accuracy$reset_states()
+  
+}))
+```
+
+```{r }
+# Finally let’s run our training loop for 5 epochs:
+
+for (epoch in 1:5) {
+  cat("Epoch: ", epoch, " -----------\n")
+  training_loop(train_ds, test_ds)  
+}
+```
+
+
+#customization
+## Tensors and operations
+
+```{r}
+# tensors
+# A Tensor is a multi-dimensional array. Similar to array objects in R, tf$Tensor objects have a data type and a shape. Additionally, tf$Tensors can reside in accelerator memory (like a GPU). TensorFlow offers a rich library of operations (tf$add, tf$matmul, tf$linalg$inv etc.) that consume and produce tf.Tensors. These operations automatically convert native R types, for example:
+
+tf$add(1, 2)
+## tf.Tensor(3.0, shape=(), dtype=float32)
+tf$add(c(1, 2), c(3, 4))
+## tf.Tensor([4. 6.], shape=(2,), dtype=float32)
+tf$square(5)
+## tf.Tensor(25.0, shape=(), dtype=float32)
+tf$reduce_sum(c(1, 2, 3))
+## tf.Tensor(6.0, shape=(), dtype=float32)
+# Operator overloading is also supported
+tf$square(2) + tf$square(3)
+## tf.Tensor(13.0, shape=(), dtype=float32)
+## Each tf$Tensor has a shape and a datatype:
+
+x = tf$matmul(matrix(1,ncol = 1), matrix(c(2, 3), nrow = 1))
+x
+## tf.Tensor([[2. 3.]], shape=(1, 2), dtype=float64)
+x$shape
+## (1, 2)
+x$dtype
+## <dtype: 'float64'>
+```
+
+### R arrays compatibility
+
+```{r}
+# Converting between a TensorFlow tf.Tensors and an array is easy:
+# 
+# TensorFlow operations automatically convert R arrays to Tensors.
+# Tensors are explicitly converted to R arrays using the as.array, as.matrix or as.numeric methods. There’s always a memory copy when converting from a Tensor to an array in R.
+
+# TensorFlow operations convert arrays to Tensors automatically
+#1 + tf$ones(shape = 1)
+## tf.Tensor([2.], shape=(1,), dtype=float32)
+# The as.array method explicitly converts a Tensor to an array
+#as.array(tf$ones(shape = 1))
+## [1] 1
+
+```
+
+### GPU acceleration
+
+```{r}
+# Many TensorFlow operations are accelerated using the GPU for computation. Without any annotations, TensorFlow automatically decides whether to use the GPU or CPU for an operation—copying the tensor between CPU and GPU memory, if necessary. Tensors produced by an operation are typically backed by the memory of the device on which the operation executed, for example:
+
+x <- tf$random$uniform(shape(3, 3))
+
+# List devices
+tf$config$experimental$list_physical_devices()
+
+## [[1]]
+## PhysicalDevice(name='/physical_device:CPU:0', device_type='CPU')
+## 
+## [[2]]
+## PhysicalDevice(name='/physical_device:XLA_CPU:0', device_type='XLA_CPU')
+# What device is x placed
+x$device
+## [1] "/job:localhost/replica:0/task:0/device:CPU:0"
+
+
+```
+
+```{r}
+# DEVICE NAMES
+# The Tensor$device property provides a fully qualified string name of the device hosting the contents of the tensor. This name encodes many details, such as an identifier of the network address of the host on which this program is executing and the device within that host. This is required for distributed execution of a TensorFlow program. The string ends with GPU:<N> if the tensor is placed on the N-th GPU on the host.
+# 
+# Explicit Device Placement
+# In TensorFlow, placement refers to how individual operations are assigned (placed on) a device for execution. As mentioned, when there is no explicit guidance provided, TensorFlow automatically decides which device to execute an operation and copies tensors to that device, if needed. However, TensorFlow operations can be explicitly placed on specific devices using the tf$device context manager, for example:
+
+print("On CPU:0:")
+with(tf$device("CPU:0"), {
+  x <- tf$ones(shape(1000, 1000))
+  print(x$device)
+})
+
+print("On GPU:0:")
+with(tf$device("GPU:0"), {
+  x <- tf$ones(shape(1000, 1000))
+  print(x$device)
+})
+
+```
+
+
+## Custom layers
+
+```{r}
+# We recommend using keras as a high-level API for building neural networks. That said, most TensorFlow APIs are usable with eager execution.
+
+library(tensorflow)
+library(keras)
+```
+
+```{r}
+# To construct a layer, simply construct the object. Most layers take as 
+# a first argument the number of output dimensions / channels.
+layer <- layer_dense(units = 100)
+
+# The number of input dimensions is often unnecessary, as it can be inferred
+# the first time the layer is used, but it can be provided if you want to
+# specify it manually, which is useful in some complex models.
+layer <- layer_dense(units = 10, input_shape = shape(NULL, 5))
+```
+
+```{r}
+# The full list of pre-existing layers can be seen in the documentation. It includes Dense (a fully-connected layer), Conv2D, LSTM, BatchNormalization, Dropout, and many others.
+
+# To use a layer, simply call it.
+layer(tf$zeros(shape(10, 5)))
+```
+
+```{r}
+# Layers have many useful methods. For example, you can inspect all variables
+# in a layer using `layer$variables` and trainable variables using
+# `layer$trainable_variables`. In this case a fully-connected layer
+# will have variables for weights and biases.
+layer$variables
+# The variables are also accessible through nice accessors
+layer$kernel
+
+layer$bias
+```
+
+### Implementing custom layers
+
+The best way to implement your own layer is extending the KerasLayer class and implementing:
+
+-   `initialize` , where you can do all input-independent initialization
+
+-   `build`, where you know the shapes of the input tensors and can do the rest of the initialization
+
+-   `call`, where you do the forward computation
+
+Note that you don't have to wait until `build` is called to create your variables, you can also create them in `initialize`.
+However, the advantage of creating them in `build` is that it enables late variable creation based on the shape of the inputs the layer will operate on.
+On the other hand, creating variables in `initialize` would mean that shapes required to create the variables will need to be explicitly specified.
+
+```{r}
+yDenseLayer <- R6::R6Class("CustomLayer",
+                                  
+  inherit = KerasLayer,
+  
+  public = list(
+    
+    num_outputs = NULL,
+    kernel = NULL,
+    
+    initialize = function(num_outputs) {
+      self$num_outputs <- num_outputs
+    },
+    
+    build = function(input_shape) {
+      self$kernel <- self$add_weight(
+        name = 'kernel', 
+        shape = list(input_shape[[2]], self$num_outputs)
+      )
+    },
+    
+    call = function(x, mask = NULL) {
+      tf$matmul(x, self$kernel)
+    }
+  
+  )
+)
+```
+
+### LAYER WRAPPER FUNCTION
+
+In order to use the custom layer within a Keras model you also need to create a wrapper function which instantiates the layer using the create_layer() function.
+For example:
+
+```{r}
+# define layer wrapper function
+layer_my_dense <- function(object, num_outputs, name = NULL, trainable = TRUE) {
+  create_layer(MyDenseLayer, object, list(
+    num_outputs = as.integer(num_outputs),
+    name = name,
+    trainable = trainable
+  ))
+}
+# 
+# Some important things to note about the layer wrapper function:
+# 
+# It accepts object as its first parameter (the object will either be a Keras sequential model or another Keras layer). The object parameter enables the layer to be composed with other layers using the magrittr pipe (%>%) operator.
+# 
+# It converts it’s output_dim to integer using the as.integer() function. This is done as convenience to the user because Keras variables are strongly typed (you can’t pass a float if an integer is expected). This enables users of the function to write output_dim = 32 rather than output_dim = 32L.
+# 
+# Some additional parameters not used by the layer (name and trainable) are in the function signature. Custom layer functions can include any of the core layer function arguments (input_shape, batch_input_shape, batch_size, dtype, name, trainable, and weights) and they will be automatically forwarded to the Layer base class.
+```
+
+```{r}
+# We can use the defined layer, for example:
+
+#layer <- layer_my_dense(num_outputs = 10)
+#layer(tf$zeros(shape(10, 5)))
+
+# Overall code is easier to read and maintain if it uses standard layers whenever possible, as other readers will be familiar with the behavior of standard layers. If you want to use a layer which is not present in tf.keras.layers, consider filing a github issue or, even better, sending us a pull request
+```
+
+### Models: Composing layers
+
+Many interesting layer-like things in machine learning models are implemented by composing existing layers.
+For example, each residual block in a resnet is a composition of convolutions, batch normalizations, and a shortcut.
+Layers can be nested inside other layers.
+
+Typically you use `keras_model_custom` when you need the model methods like: `fit`,`evaluate`, and `save` (see [Custom Keras layers and models](https://tensorflow.rstudio.com/tutorials/advanced/customization/custom-layers/TODO) for details).
+
+One other feature provided by `MOdel` (instead of `Layer`) is that in addition to tracking variables, a `Model` also tracks its internal layers, making them easier to inspect.
+
+For examplle here is a ResNet block:
+
+```{r}
+resnet_identity_block <- function(kernel_size, filters) {
+  keras_model_custom(function(self) {
+    
+    self$conv2a <- layer_conv_2d(filters = filters[1], kernel_size = c(1, 1))
+    self$bn2a <- layer_batch_normalization()
+
+    self$conv2b <- layer_conv_2d(
+      filters = filters[2], 
+      kernel_size = kernel_size, 
+      padding = 'same'
+    )
+    self$bn2b = layer_batch_normalization()
+
+    self$conv2c = layer_conv_2d(filters = filters[3], kernel_size = c(1, 1))
+    self$bn2c = layer_batch_normalization()
+    
+    function(inputs, mask = NULL, training = FALSE) {
+      
+      x <- inputs %>% 
+        self$conv2a() %>% 
+        self$bn2a(training = training) %>% 
+        tf$nn$relu() %>% 
+        self$conv2b() %>% 
+        self$bn2b(training = training) %>% 
+        tf$nn$relu() %>% 
+        self$conv2c() %>% 
+        self$bn2c(training = training)
+      
+      tf$nn$relu(x + inputs)
+    }
+  })
+}
+
+block <- resnet_identity_block(kernel_size = 1, filters = c(1, 2, 3))
+block(tf$zeros(shape(1, 2, 3, 3)))
+
+block$layers
+
+length(block$variables)
+```
+
+```{r}
+model <- keras_model_sequential() %>% 
+  layer_conv_2d(filters = 1, kernel_size = c(1, 1)) %>% 
+  layer_batch_normalization() %>% 
+  layer_conv_2d(
+    filters = 2, 
+    kernel_size = c(1,1), 
+    padding = 'same'
+  ) %>% 
+  layer_batch_normalization() %>% 
+  layer_conv_2d(filters = 3, kernel_size = c(1, 1)) %>% 
+  layer_batch_normalization()
+
+# trigger model building
+# model(tf$zeros(c(1, 2, 3, 3)))
+# 
+# summary(model)
+```
+## Automatic differentiation and gradient tape
+
+```{r}
+library(tensorflow)
+```
+
+### Gradient Tapes
+
+TensorFlow provides the `tf$GradientTape` API for automatic differentiation - computing the gradient of a computation with respect to its input variables.
+
+Tensorflow "records" all operations executed inside the context of a `tf$GradientTape` onto a "tape".
+Tensorflow then uses that tape and the gradients associated with each recorded operation to compute the gradients of a "recorded" computation using reverse mode differentiation.
+
+For example:
+
+```{r}
+x <- tf$ones(shape(2, 2))
+
+with(tf$GradientTape() %as% t, {
+  t$watch(x)
+  y <- tf$reduce_sum(x)
+  z <- tf$multiply(y, y)
+})
+
+# Derivative of z with respect to the original input tensor x
+dz_dx <- t$gradient(z, x)
+dz_dx
+```
+
+```{r}
+# You can also request gradients of the output with respect to intermediate values computed during a “recorded” tf$GradientTape context.
+
+x <- tf$ones(shape(2, 2))
+
+with(tf$GradientTape() %as% t, {
+  t$watch(x)
+  y <- tf$reduce_sum(x)
+  z <- tf$multiply(y, y)
+})
+
+# Use the tape to compute the derivative of z with respect to the
+# intermediate value y.
+dz_dy <- t$gradient(z, y)
+dz_dy
+## tf.Tensor(8.0, shape=(), dtype=float32)
+```
+
+```{r}
+# By default, the resources held by a GradientTape are released as soon as GradientTape$gradient() method is called. To compute multiple gradients over the same computation, create a persistent gradient tape. This allows multiple calls to the gradient() method as resources are released when the tape object is garbage collected. For example:
+
+x <- tf$constant(3)
+
+with(tf$GradientTape(persistent = TRUE) %as% t, {
+  t$watch(x)
+  y <- x * x
+  z <- y * y
+})
+
+# Use the tape to compute the derivative of z with respect to the
+# intermediate value y.
+dz_dx <- t$gradient(z, x) # 108.0 (4*x^3 at x = 3)
+dz_dx
+
+## tf.Tensor(108.0, shape=(), dtype=float32)
+dy_dx <- t$gradient(y, x) # 6.0
+dy_dx
+## tf.Tensor(6.0, shape=(), dtype=float32)
+rm(t)  # Drop the reference to the tape
+```
+
+### RECORDING CONTROL FLOW
+
+```{r}
+f <- function(x, y) {
+  output <- 1
+  for (i in seq_len(y)) {
+    if (i > 2 & i <= 5)
+      output = tf$multiply(output, x)
+  }
+  output
+}
+
+grad <- function(x, y) {
+  with(tf$GradientTape() %as% t, {
+    t$watch(x)
+    out <- f(x, y)
+  })
+  t$gradient(out, x)
+}
+
+x <- tf$constant(2)
+grad(x, 6)
+## tf.Tensor(12.0, shape=(), dtype=float32)
+grad(x, 5)
+## tf.Tensor(12.0, shape=(), dtype=float32)
+grad(x, 4)
+## tf.Tensor(4.0, shape=(), dtype=float32)
+```
+
+### HIGHER-ORDER GRADIENTS
+
+Operations inside of the GradientTape context manager are recorded for automatic differentiation.
+If gradients are computed in that context, then the gradient computation is recorded as well.
+As a result, the exact same API works for higher-order gradients as well.
+For example:
+
+```{r}
+x <- tf$Variable(1.0)  # Create a Tensorflow variable initialized to 1.0
+
+with(tf$GradientTape() %as% t, {
+  
+  with(tf$GradientTape() %as% t2, {
+    y <- x*x*x
+  })
+  
+  # Compute the gradient inside the 't' context manager
+  # which means the gradient computation is differentiable as well.
+  dy_dx <- t2$gradient(y, x)
+  
+})
+
+d2y_dx <- t$gradient(dy_dx, x)
+
+dy_dx
+## tf.Tensor(3.0, shape=(), dtype=float32)
+d2y_dx
+## tf.Tensor(6.0, shape=(), dtype=float32)
+```
+
+## Custom training: basics
+
+```{r echo=FALSE}
+v <- tf$Variable(1)
+
+# Use Python's `assert` as a debugging statement to test the condition
+as.numeric(v) == 1
+## [1] TRUE
+# Reassign the value `v`
+v$assign(3)
+## <tf.Variable 'UnreadVariable' shape=() dtype=float32, numpy=3.0>
+as.numeric(v) == 3
+## [1] TRUE
+# Use `v` in a TensorFlow `tf.square()` operation and reassign
+v$assign(tf$square(v))
+## <tf.Variable 'UnreadVariable' shape=() dtype=float32, numpy=9.0>
+as.numeric(v) == 9
+## [1] TRUE
+```
+
+### Fit a linear model
+
+Let's use the concepts you have learned so far---`Tensor`, `Variable`, and `GradientTape`---to build and train a simple model.
+This typically involves a few steps:
+
+1.  Define the model.
+
+2.  Define a loss function.
+
+3.  Obtain training data.
+
+4.  Run through the training data and use an "optimizer" to adjust the variables to fit the data.
+
+Here, you'll create a simple linear model, `f(x) = x * W + b`, which has two variables: `W` (weights) and `b` (bias).
+You'll synthesize data such that a well trained model would have `W = 3.0` and `b = 2.0`
+
+### DEFINE THE MODEL
+
+You may organize your TensorFlow code to build models the way you prefer, here we will suggest using an R6 class.
+
+```{r}
+Model <- R6::R6Class(
+  classname = "Model",
+  public = list(
+    W = NULL,
+    b = NULL,
+    
+    initialize = function() {
+      self$W <- tf$Variable(5)
+      self$b <- tf$Variable(0)
+    },
+    
+    call = function(x) {
+      self$W*x + self$b
+    }
+    
+  )
+)
+
+model <- Model$new()
+model$call(3)
+## tf.Tensor(15.0, shape=(), dtype=float32)
+```
+
+### DEFINE THE LOSS FUNCTION
+
+A loss function measures how well the output of a model for a given input matches the target output.
+The goal is to minimize this difference during training.
+Let's use the standard L2 loss, also known as the least square errors:
+
+```{r}
+loss <- function(y_pred, y_true) {
+  tf$reduce_mean(tf$square(y_pred - y_true))
+}
+```
+
+### OBTAIN TRAINING DATA
+
+First, synthesize the training data by adding random Gaussian (Normal) noise to the inputs:
+
+```{r}
+TRUE_W = 3.0
+TRUE_b = 2.0
+NUM_EXAMPLES = 1000
+
+inputs  <- tf$random$normal(shape=shape(NUM_EXAMPLES))
+noise   <- tf$random$normal(shape=shape(NUM_EXAMPLES))
+outputs <- inputs * TRUE_W + TRUE_b + noise
+```
+
+Before training the model, visualize the loss value by plotting the model's predictions in red and the training data in blue:
+
+```{r message=FALSE}
+library(ggplot2)
+library(tibble)
+tibble(
+  inputs = as.numeric(inputs), 
+  outputs = as.numeric(outputs),
+  predicted = as.numeric(model$call(inputs))
+) %>% 
+  ggplot(aes(x = inputs)) +
+  geom_point(aes(y = outputs)) +
+  geom_line(aes(y = predicted), color = "blue")
+```
+
+### DEFINE A TRAINING LOOP
+
+With the network and training data, train the model using gradient descent to update the weights variable (W) and the bias variable (b) to reduce the loss.
+
+There are many variants of the gradient descent scheme that are captured in `tf$train$Optimizer`---our recommended implementation.
+But in the spirit of building from first principles, here you will implement the basic math yourself with the help of `tf.GradientTape` for automatic differentiation and `tf.assign_sub` for decrementing a value (which combines `tf.assign` and `tf.sub`):
+
+```{r}
+train <- function(model, inputs, outputs, learning_rate) {
+  with (tf$GradientTape() %as% t, {
+    current_loss = loss(model$call(inputs), outputs)
+  })
+  
+  d <- t$gradient(current_loss, list(model$W, model$b))
+  
+  model$W$assign_sub(learning_rate * d[[1]])
+  model$b$assign_sub(learning_rate * d[[2]])
+  current_loss
+}
+```
+
+Finally, let's repeatedly run through the training data and see how W and b evolve.
+
+```{r}
+model <- Model$new()
+
+Ws <- bs <- c()
+
+for (epoch in seq_len(20)) {
+  
+  Ws[epoch] <- as.numeric(model$W)
+  bs[epoch] <- as.numeric(model$b)
+  
+  current_loss <- train(model, inputs, outputs, learning_rate = 0.1)
+  cat(glue::glue("Epoch: {epoch}, Loss: {as.numeric(current_loss)}"), "\n")
+}
+```
+
+```{r}
+library(tidyr)
+tibble(
+  epoch = 1:20,
+  Ws = Ws,
+  bs = bs
+) %>% 
+  pivot_longer(
+    c(Ws, bs),
+    names_to = "parameter", 
+    values_to = "estimate"
+  ) %>% 
+  ggplot(aes(x = epoch, y = estimate)) +
+  geom_line() +
+  facet_wrap(~parameter, scales = "free")
+```
+

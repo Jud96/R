@@ -1,0 +1,493 @@
+---
+title: "neural_network_using_torch"
+author: "Bakro"
+date: "12/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In this tutorial we are going to learn how to use Torch in R. Torch is one of the most used frameworks for creating neural networks and deep-learning and has recently been released for R.
+
+In the tutorial we will cover everything you need to know to code your neural networks from start to finish. More specifically we are going to see:
+
+-   **How to install Torch**. This might seem silly, but for Torch to work correctly you have to have the correct version of R and certain plugins installed. It is not difficult, but it is very important.
+
+-   **Different ways to create the structures of our neural networks**. Torch offers several ways to create our networks. We will see what they are and when it is advisable to use each of them.
+
+-   **How to upload our data to Torch**. Whether we use numerical data or images, you will learn how to load your data in a format that Torch understands. In addition, in the case of images, in this tutorial, I also show you how to use Torchvision, a Torch package that allows you to apply transformations and load images in a batch.
+
+-   **How to train our networks with Torch in R**. I will explain what types of activation functions and optimizers there are, how they are implemented and, the characteristics of each of them.
+
+-   **How to save your Torch models**. And, a model is useless if we do not put it into production. So I will explain how to save and load them and the conventions that exist.
+
+-   **Comparison with Tensorflow and Keras**. As you can see, Torch offers functionalities that are very similar to the ones offered by Tensorflow and Keras. In this section, I explain, from my point of view, the advantages of each of them for Python users.
+
+As you can see, this is a very extensive tutorial on how to use Torch in R, so let's get to it!
+
+## **Torch in R: first steps**
+
+### **Install Torch in R**
+
+Although Torch works correctly with version 3.6.3 of R, if your goal is to Docker-ize the model and put it into production (as I explained in [this post](https://anderfernandez.com/en/blog/how-to-put-an-r-model-in-production/)), I would recommend using R version 4.0.3, since with previous versions it has given error. (Note: you can check your version of R by viewing the `version` object).
+
+Besides, if you install version 4.0.3 and you are Windows users, you will also have to install RTools40. This tool allows you to compile the C ++ code, in which Torch is written. Doing it is very easy, just follow [this tutorial](https://cran.r-project.org/bin/windows/Rtools/).
+
+Once you do this, we can download and install the library. If you have version 3.6.3 it will ask you to install the binaries. If you have any problem, try upgrading youR version to 4.0.3.
+
+```{r}
+install.packages("torch")
+library(torch)
+```
+
+### **Use Torch on CPU or on GPU**
+
+Now that we have R installed, whe have to to decide if we want the models to train on GPU (if we have one compatible with the installed drivers) or if they will train on CPU.
+
+If you don't know if we have Cuda to use Torch on the GPU, you can run the following command:
+
+```{r}
+cuda_is_available()
+```
+
+If we want to use Torch on GPU we will have to indicate that the tensors run on GPU. To do this, you have to apply the \$cuda() class every time you create a Tensor. While it is recommended by Torch, it is not optimal and is a bit tedious.
+
+Now that we have Torch installed and we know how to run it on a GPU, we can dive right into creating our neural networks. Let's go for it!
+
+## **How to code the structure of a neural network in R with Torch**
+
+As I mentioned at the beginning of this tutorial, there are two different ways of coding a neural network in Torch (in both R and Python):
+
+1.  **Create a sequential model**. This way of working is very similar to the way of doing it in Keras. We simply have to indicate the input and output tensors and add the layers to the model. Simple and fast.
+
+2.  **Create a model from scratch**. This case is quite similar to using Tensorflow, since we must indicate all the elements of the network and program the forward pass manually. There are two ways of creating a model from scratch: we can either code everything or we can create a class for our model. This last way of coding the network is the most frequent one.
+
+Of course, let's see how each of these ways of programming a neural network in R with Torch works:
+
+### **Creating the structure of the sequential network**
+
+To program a sequential neural network, we must include the different layers of the network within the `nn_sequential` function. In this sense, an important difference from Keras is that **the definition of the activation function is done outside the declaration of the layer type**.
+
+Besides, **in each layer, we must indicate both the input and output dimensions of the data**. Although this is something very simple in dense or fully-connected neural networks, in the case of convolutional neural networks, you have to be clear about how padding, kernels, and others work.
+
+If this is not your case, don't worry, you will find everything you need to know in my [post about convolutional neural networks](https://anderfernandez.com/en/blog/how-to-create-convolutional-neural-network-keras/) 😉
+
+In any case, we are going to program a fully-connected neural network with 4 layers and 4,8,16 and 3 neurons per layer, respectively. Without a doubt, it is a very large network for the problem that we will solve, but it serves as an example.
+
+```{r}
+model = nn_sequential(
+
+  # Layer 1
+  nn_linear(4, 8),
+  nn_relu(), 
+
+  # Layer 2
+  nn_linear(8, 16),
+  nn_relu(),
+
+  # Layee 3
+  nn_linear(16,3),
+  nn_softmax(2)
+)
+```
+
+As you can see, this way of creating a neural network in Torch with R is very very simple and it is very similar to the way of doing it in Keras.
+
+Having seen the first way to create a neural network in Torch, we are going to see the second classic way to create a neural network in Torch: creating a neural network through a custom class.
+
+### **Creating the structure of the neural network using a class in R with Torch**
+
+Another way of coding a neural network in R with Torch is by defining our neural network as a custom class. In this case, the model is much more flexible, but we will have to define all the layers that we are going to use and do the forward-pass manually.
+
+```{r}
+et = nn_module(
+  "class_net",
+
+  initialize = function(){
+
+    self$linear1 = nn_linear(4,8)
+    self$linear2 = nn_linear(8,16)
+    self$linear3 = nn_linear(16,3)
+
+  },
+
+  forward = function(x){
+
+    x %>%
+      self$linear1() %>%
+      nnf_relu() %>%
+      self$linear2() %>%
+      nnf_relu() %>%
+      self$linear3() %>%
+      nnf_softmax(2)
+
+  }
+
+)
+
+model2 = net()
+```
+
+```{r}
+x = torch_randint(0,2,size = c(20,4)) # I create a tensor with random data
+
+model2$forward(x)
+```
+
+### **When to use each type of neural network in Torch**
+
+At first glance we may think that modules (or classes) do not have great advantages over sequential models, but this is not the case.
+
+And is that when we start to create networks of hundreds of layers, using the sequential model can be a bit chaotic. A much better way to approach these networks is to split the network into different sections and in each section use a module. Thus, the final network will be a module of modules, making the code much more readable and actionable.
+
+Besides, another use case is when we create a network that is composed of several networks, as we saw in the post on [how to create a GAN in Python](https://anderfernandez.com/en/blog/how-to-code-gan-in-python/). In these cases, the simplest thing is that each network is a module itself and that the entire network is a module of modules.
+
+In summary, **as a rule of thumb, if we are going to create a simple neural network, we have to do more than with sequential networks. However, for more complex networks, better create classes**.
+
+Now that you know how to create the structure of our network ... let's see how to convert our data into tensors that Torch understands!
+
+## **Convert data to Tensors**
+
+Now we have the structure of our network created, but of course, with this, we are not even able to get a prediction. To do this, we must convert our data into Tensors, the data format that Torch understands.
+
+As in the rest of frameworks, in Torch there are two main types of data that we can pass: numerical data and images. This is a complete tutorial for Torch in R, so don't worry, we'll see both. Let's start with the numerical data!
+
+### **Numeric input data**
+
+If we work with numerical data we will have to convert our input data and our labels into tensors.
+
+To do this, Torch offers us the `torch_tensor` function, to which we must pass two parameters:
+
+1.  The data that we want to convert into a tensor.
+
+2.  The type of data to be interpreted by Torch. Each type of data has a function, although we will generally use numbers, which are defined with the `torch_float()` function.
+
+As you can see, it is very easy, although there are two important details that, if you know, will save you time:
+
+#### **Detail 1. Data types that you can convert into Tensors**
+
+Generally, when working with R we tend to work with dataframes. However, the `torch_tensor` function does not support dataframes, as it only supports three types of data: arrays, vectors, and arrays (images).
+
+So if you have the data stored in a data frame, make sure to convert your data to these data types first.
+
+#### **Detail 2. Data types according to the cost function**
+
+As I said before, we are most likely working with numeric data, so we define our tensors as `torch_float()`.
+
+However, **different cost functions may require different types of data**, if you don't have the data in the right type, it will return an error (with a pretty clear message, though). In my case, for example, the cost function is Categorical Cross Entropy, which requires the labels to have a long format.
+
+Luckily, this is something that is clearly explained in the error message, so if this is the case, it will be easy for you to detect it.
+
+That being said, let's put it into practice with an example.
+
+#### **Example of Converting Numeric Input Data to Tensor**
+
+In our case we are going to simulate a real case with the Iris dataset. To do this, we will:
+
+1.  Split our data between train and test.
+
+2.  Convert our input data to matrices and labels to vectors.
+
+3.  Convert our input data and labels into tensors.
+
+```{r}
+# 1.Split our data between train and test
+train_split = 0.8
+sample_indices =sample(nrow(iris) * train_split)
+
+# 2. Convert our input data to matrices and labels to vectors.
+x_train = as.matrix(iris[sample_indices, -5])
+y_train = as.numeric(iris[sample_indices, 5])
+x_test = as.matrix(iris[-sample_indices, -5])
+y_test = as.numeric(iris[-sample_indices, 5])
+
+# 3. Convert our input data and labels into tensors.
+x_train = torch_tensor(x_train, dtype = torch_float())
+y_train = torch_tensor(y_train, dtype = torch_long())
+x_test = torch_tensor(x_test, dtype = torch_float())
+y_test = torch_tensor(y_test, dtype = torch_long())
+```
+
+A good way to check that the network is created correctly is to verify that the prediction and the output data are the same size. In our case, when using CrossEntropyLoss, it will not be fulfilled, but in the vast majority of cases, it is::
+
+```{r}
+pred_temp = model(x_train)
+cat(
+  " Dimensions Prediction: ", pred_temp$shape," - Object type Prediction: ", as.character(pred_temp$dtype), "\n",
+  "Dimensions Label: ", y_train$shape," - Object type Label: ", as.character(y_train$dtype)
+  )
+```
+
+**Use images as input data in Torch R**
+
+#### **Applying transformations on Images**
+
+Regarding image processing, Torch has an additional package called `torchvision` that helps to load and transform images, among other things. So the first thing to do is install and load the package.
+
+```{r}
+install.packages("torchvision")
+library(torchvision)
+```
+
+Now that we have the package installed, we are going to download a simple image to see the transformations it offers:
+
+```{r}
+library(magick)
+
+url_imagen = "https://c.files.bbci.co.uk/48DD/production/_107435681_perro1.jpg"
+imagen = image_read(url_imagen)
+
+plot(imagen)
+```
+
+Now that we know the image, we can see everything we can do with the Torchvision transformations, among which we find:
+
+-   `transform_crop` and `transform_center_crop`: allow you to crop the image. In the case of `transform_crop` we have to indicate from which pixel (below and to the left) to start, while with center_crop cuts starting from the middle.
+
+-   `transform_resize` and `transform_resized_crop`: allow you to re-scale the image to fit the desired size. In addition, in case we want to cut it, we have the resized_crop function, which allows us to carry out both steps in one.
+
+-   `transform_hflip` and `transform_vflip`: allow flipping the image both horizontally and vertically. This is a very common technique to significantly increase the number of images in the dataset.
+
+-   `transform_adjust`: this is not a function, but rather a family of functions that allow you to modify different aspects of the image, such as brightness, contrast, gamut, or saturation.
+
+-   `transform_random`: as in the previous case, it is a family of functions that allow performing all the functions mentioned above, but only to a random sample of images. In this way, we can increase the number of images preventing the network from learning to "undo" the generated transformations.
+
+    That being said, let's see an example:
+
+    ```{r}
+    img_width = image_info(imagen)$width
+    img_height = image_info(imagen)$height
+
+    imagen_crop = transform_crop(imagen,0,0, img_height/2, img_width/2)
+    imagen_crop_center = transform_center_crop(imagen, c(img_height/2, img_width/2))
+    imagen_resize = transform_resize(imagen, c(img_height/2, img_width/2))
+    imagen_flip = transform_hflip(imagen)
+
+    image_grid = c(imagen_crop, imagen_crop_center, 
+                   imagen_resize, imagen_flip)
+
+    geometry = geometry_area(400, 200)
+
+    image_montage(image_grid, tile = '2', geometry = geometry)
+    ```
+
+#### **Things to take into account of the transformations**
+
+As we can see, the transformations are very simple. However, currently, version 0.1.0 of torchvision does not allow to perform all the operations on all the types of objects indicated in the documentation. For example, in the documentation of the image adjustment functions, they indicate that it works on objects of class `magick-image`, when, in fact, it does not (it returns an error).
+
+Luckily, when working with images with Torch in R, the images we have created are generally not wanted to display. Instead, these images are to be passed to a neural network to train the network. To do this, Torch uses the `dataloader`.
+
+### **Upload images to Torch with dataloaders**
+
+Dataloaders allow images to be treated in a grouped manner. For example, when we train a CNN, we generally train the network with groups of images called batches. Dataloaders allow us to define the batch size, if the images are the same or if each batch should have a random sample, etc.
+
+In addition, to see how the dataloaders work, we are going to take the opportunity to see how to download a torchvision dataset, as well as learn how to load a dataset that is saved in a local folder. To do this, we will:
+
+1.  Download a preloaded dataset from torchvision.
+
+2.  Upload the images from the folder we just downloaded.
+
+3.  Create the dataloader that allows us to load the images in batches with a certain size.
+
+4.  Load a batch.
+
+```{r}
+# Download a preloaded dataset from torchvision
+tiny_imagenet_dataset("images", download = T)
+
+# Upload the images from the folder we just downloaded.
+dataset = image_folder_dataset("images")
+
+# Create the dataloader
+imagenes_dataloader = dataloader(dataset , batch_size =  10, shuffle = T)
+
+# Save batches
+batch = imagenes_dataloader$.iter()$.next()
+
+# Visualize the first batch size
+batch[[1]]$size()
+```
+
+As we can see, with Torch downloading datasets, uploading our own datasets, and uploading those datasets in batches is very very simple, although it is true that they still have things to polish.
+
+Now, we have the structure of the network, the input data, and we already know how to forward-pass to obtain a prediction. There is only one thing left: train the network. Let's go for it!
+
+## **How to train a neural network with Torch in R**
+
+Regardless of how we created the network, training a neural network in Torch consists of four steps:
+
+1.  Set gradients to zero.
+
+2.  Define and calculate the cost and optimizer
+
+3.  Propagate the error on the network.
+
+4.  Apply gradient optimizations.
+
+### **Set gradients to zero**
+
+In order to apply the optimizations, Torch accumulates the gradients of the backward passes. We do not want the gradients to accumulate, but in each backward pass, we want to take a step in the direction towards the minimum, that is, at each iteration, apply a single gradient. Therefore, in each pass of the training, we must start by setting the gradients to zero.
+
+We can do this very easily by applying the zero_grad method of the optimizer that we are going to define. In our case, we will do this point with the following function:
+
+```{r}
+optimizer$zero_grad()
+```
+
+Yes, I know it seems silly, but if you skip this step, your network will not train well.
+
+**Define and calculate the cost and optimizer**
+
+As in the case of Keras, in Torch we have many functions to be used as cost functions, although basically, the three main ones are:
+
+-   `nn_cross_entropy_loss`: it is used with classification networks with more than 2 possible categories.
+
+-   `nn_bce_loss`: tt is used in binary classification algorithms, that is, when we predict between two classes.
+
+-   `nn_mse_loss`: for the algorithms used in regression problems.
+
+Once we have defined the cost function, we must calculate the cost. To do this, we simply have to pass the prediction and the actual values to our cost function.
+
+**Note**: In Torch it is a standard to define the cost function in the criterion variable. It is not mandatory, but surely in the documentation (especially PyTorch), you will see it like this.
+
+In this sense, it is important to highlight an issue that I have already commented on: different cost functions require that the output data or the labels to be in a specific form. For example, in my case I use nn_cross_entropy_loss, the labels must be of type long, otherwise, it will not work.
+
+So, let's see how to create and calculate the error:
+
+```{r}
+# We create the cost function and the optimizer
+criterion = nn_cross_entropy_loss()  
+
+# We calculate the error
+loss = criterion(pred_temp, y_train)
+loss
+```
+
+Also, we have to define the optimizer. In this case we also have many options, although generally the Adam optimizer will be used, which gets good results.
+
+To create our optimizer, we simply have to pass the parameters of our model to the optimizer function we want. In our case, the optimizer Adam is defined in the `optim_adam` function.
+
+```{r}
+optimizer = optim_adam(model$parameters)
+```
+
+### **Propagate the error on the network**
+
+Now that we have calculated the error in the last layer and our optimizer, we have to propagate the error through the network and then apply the gradients.
+
+To propagate the error through the network, simply apply the backward method of our error.
+
+```{r}
+loss$backward()
+```
+
+### **Apply gradient optimizations**
+
+Finally, now that we have the error in each neuron, we must apply the gradients. To do this, you simply have to apply the step method of our optimizer.
+
+```{r}
+optimizer$step()
+```
+
+These would be all the steps to train a neural network with Torch. But, I think it will be clearer if we see it all together in a practical example, don't you think? Well let's get to it!
+
+### **Example of training a neural network in R with Torch**
+
+Now that we know all the steps separately, let's see how everything would be done together. As you will see, you simply have to "put together" the different parts that we have used so far.
+
+```{r}
+# Define the network
+model = nn_sequential(
+
+  # Layer 1
+  nn_linear(4, 8),
+  nn_relu(), 
+
+  # Layer 2
+  nn_linear(8, 16),
+  nn_relu(),
+
+  # Layer 3
+  nn_linear(16,3)
+)
+
+# Define cost and optimizer
+criterion = nn_cross_entropy_loss()  
+optimizer = optim_adam(model$parameters, lr = 0.01)
+
+epochs = 200
+
+# Train the net
+for(i in 1:epochs){
+
+  optimizer$zero_grad()
+
+  y_pred = model(x_train)
+  loss = criterion(y_pred, y_train)
+  loss$backward()
+  optimizer$step()
+
+
+  # Check Training
+  if(i %% 10 == 0){
+
+    winners = y_pred$argmax(dim=2)+1
+    corrects = (winners == y_train)
+    accuracy = corrects$sum()$item() / y_train$size()
+
+    cat(" Epoch:", i,"Loss: ", loss$item()," Accuracy:",accuracy,"\n")
+  }
+
+}
+```
+
+We have just created a neural network with Torch in R! Pretty easy, right? There is only one thing left to learn: learn to save our models in order to put them into production.
+
+**Save and Load Models with Torch**
+
+Now that we have our model trained, we will have to put it into production (which I explained in [this post](https://anderfernandez.com/en/blog/how-to-put-an-r-model-in-production/)). To do this, you have to know how to save and load Torch models, which has a couple of important issues.
+
+First of all, if your model uses a `dropout` or `batchnomarlization` layer we have to put those layers in evaluation mode before making the prediction, otherwise, the results will be inconsistent. To do this, we have to apply the eval method of our model. If our network does not have this kind of layers, we can skip this step.
+
+```{r}
+model$eval()
+```
+
+Now that we have our layers in "prediction mode", we are going to save the model. PyTorch models are usually saved with the extensions `.pt` or `.pth`. In our case, we can save Torch models in R with this extension or, if we also have PyTorch models, we can save them with the extension `.rt`, .`rth`.
+
+```{r}
+torch_save(model, "modelo.rt")
+```
+
+Finally, to load the model we simply have to pass the torch_load function and assign it to the variable that we want:
+
+```{r}
+modelo_cargado = torch_load("modelo.rt")
+modelo_cargado
+```
+
+And this would be all! You already know how to create neural networks with Torch in R (in two different ways), how to create the input data (even applying batch transformations in case they are images), how to train your neural networks and, finally, how to save them.
+
+Finally, I would like to make a small comparison between Torch and Keras / Tensorflow, since I think it is something that is worth it.
+
+## **Comparison creating neural networks with Torch vs Keras / Tensorflow in R**
+
+If we want to compare Keras / Tensorflow and Torch in R, I think there are two things that we have to consider:
+
+-   Torch, currently (v0.1.1) is in a maturing state. Broadly speaking, it works well, but it does show in two ways:
+
+    -   Lack of documentation. There is a lot, a lot of documentation and real examples missing in R. It is true that the framework is the same as in Python, so you can review the PyTorch documentation, as long as you know about Python. Without a doubt, I think it is something very relevant.
+
+    -   Incomplete functions: Not all functions have the characteristics that are indicated in the documentation. While it is something that will be fixed in the short term, as of this writing, it is somewhat annoying.
+
+-   Keras and Tensorflow require Python, while Torch works directly with C ++. In terms of putting the models into production, this makes a big difference, since if you want to put a Tensorflow / Keras model into production with R code, the Docker will weigh almost twice as much as if you do it with Torch.
+
+That being said, there are personally certain things that I like best about each of them. In my opinion, Torch is somewhat more intuitive to use, as it seems to be more integrated into the programming language. This also makes it more flexible for me.
+
+Pn the other hand, Tensorflow / Keras have functionalities not developed in Torch that save you from having to write more lines of code, such as Tensorboard.
+
+In any case, I think both frameworks are very interesting, useful and, conceptually, they work with quite similar abstractions. So if you can, I would encourage you to learn both.
+
+As always, if this complete Torch in R tutorial has been interesting to you, I encourage you to subscribe so as not to miss the posts that I am uploading. And if you have any questions, do not hesitate to write to me. See you in the next one!

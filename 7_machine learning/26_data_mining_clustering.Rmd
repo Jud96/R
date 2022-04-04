@@ -1,0 +1,293 @@
+---
+title: "Data_mining"
+author: "Bakro"
+date: "10/28/2021"
+output: 
+  html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 3
+   theme: flatly
+   highlight: zenburn
+   df_print: paged
+   code_folding: hide 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# clustering
+
+Data clustering is to partition data into groups, where the data in the same group are similar to one another and the data from different groups are dissimilar [Han and Kamber, 2000]. I To segment data into clusters so that the intra-cluster similarity is maximized and that the inter-cluster similarity is minimized. I The groups obtained are a partition of data, which can be used for customer segmentation, document categorization, etc.
+
+The Iris Dataset - I The iris dataset [Frank and Asuncion, 2010] consists of 50 samples from each of three classes of iris flowers. There are five attributes in the dataset: I sepal length in cm, I sepal width in cm, I petal length in cm, I petal width in cm, and I class: Iris Setosa, Iris Versicolour, and Iris Virginica. Detailed desription of the dataset can be found at the UCI Machine Learning Repository ‡
+
+### Partitioning clustering
+
+Partitioning the data into k groups first and then trying to improve the quality of clustering by moving objects from one group to another I k-means [Alsabti et al., 1998, Macqueen, 1967]: randomly selects k objects as cluster centers and assigns other objects to the nearest cluster centers, and then improves the clustering by iteratively updating the cluster centers and reassigning the objects to the new centers. I k-medoids [Huang, 1998]: a variation of k-means for categorical data, where the medoid (i.e., the object closest to the center), instead of the centroid, is used to represent a cluster. I PAM and CLARA [Kaufman and Rousseeuw, 1990] I CLARANS [Ng and Han, 1994]
+
+I The result of partitioning clustering is dependent on the selection of initial cluster centers and it may result in a local optimum instead of a global one. (Improvement: run k-means multiple times with different initial centers and then choose the best clustering result.) I Tends to result in sphere-shaped clusters with similar sizes I Sentitive to outliers I Non-trivial to choose an appropriate value for k
+
+## Hierarchical Clustering
+
+clustering organizes things that are close into groups
+
+how do we define close ?
+
+how do we group things ?
+
+how do we visualize the groups ?
+
+how do we interpret the grouping ?
+
+an agglomerative approch
+
+-   find closest two things
+-   put them together
+-   find next closest
+
+requires
+
+-   defined distance
+-   merging approach
+
+produces
+
+-   tree showing how close things are to each other
+
+**how do we define close**
+
+-   most important thing Garbage in -\> Garbage out
+
+-   distance or similarity
+
+    -   continuouns -euclidean distance
+
+    -   continuouns -correlation similarity
+
+    -   Binary manhattan distance
+
+-   pick a distance /similarity that makes sense for your problem
+
+```{r}
+set.seed(1234)
+par(mar = c(0,0,0,0))
+x <- rnorm(12,mean = rep(1:3,each =4),sd = 0.2)
+y <- rnorm(12,mean = rep(c(1,2,1),each =4),sd = 0.2)
+plot(x,y,col = "blue",pch = 19 ,cex =2)
+text(x+0.05,y+0.05,labels = as.character(1:12))
+```
+
+```{r}
+df <- data.frame(x= x , y = y)
+distxy <-dist(df)
+```
+
+```{r}
+hclustering <- hclust(distxy)
+plot(hclustering)
+```
+
+```{r}
+df <- data.frame(x=x ,y= y)
+set.seed(143)
+dataMatrix <- as.matrix(df[sample(1:12),])
+heatmap(dataMatrix)
+```
+### example
+```{r}
+## hiercrchical clustering
+set.seed(2835)
+# draw a sample of 40 records from the iris data, so that the
+# clustering plot will not be over crowded
+idx <- sample(1:dim(iris)[1], 40)
+iris3 <- iris[idx, ]
+# remove class label
+iris3$Species <- NULL
+# hierarchical clustering
+hc <- hclust(dist(iris3), method = "ave")
+# plot clusters
+plot(hc, hang = -1, labels = iris$Species[idx])
+# cut tree into 3 clusters
+rect.hclust(hc, k = 3)
+# get cluster IDs
+groups <- cutree(hc, k = 3)
+```
+## K_means clustering :
+
+- A partioning approach
+
+-   fix number of cluster
+
+-   get centroids of each cluster
+
+-   assign things to closest centroid
+
+-   recalculate centroids
+
+-requires
+
+-   a defined distance metric
+
+-   a number of clusters
+
+-   an initial guess as to cluster centroids
+
+-produces
+
+-   final estimate of cluster centroids
+
+-   an assignment of each point to clusters
+
+```{r}
+x <- rnorm(12,mean = rep(1:3,each =4),sd = 0.2)
+y <- rnorm(12,mean = rep(c(1,2,1),each =4),sd = 0.2)
+df =data.frame(x,y)
+kmeansobj <- kmeans(df,centers = 3)
+names(kmeansobj)
+```
+
+```{r}
+kmeansobj$cluster
+```
+
+```{r}
+par(mar =rep(0.2,4))
+plot(x,y,col =kmeansobj$cluster,pch = 19 ,cex = 2)
+points(kmeansobj$centers,col=1:3,pch = 3 ,cex =3 ,lwd =3)
+```
+### clustering with PAM
+```{r}
+## clustering with PAM
+library(cluster)
+# group into 3 clusters
+pam.result <- pam(iris, 3)
+# check against actual class label
+table(pam.result$clustering, iris$Species)
+plot(pam.result)
+```
+### Clustering with pamk()
+
+```{r eval=FALSE}
+library(fpc)
+pamk.result <- pamk(iris3)
+# number of clusters
+pamk.result$nc
+
+plot(pamk.result)
+```
+## Dimension Reduction
+
+```{r}
+set.seed(12345)
+par(mar = rep(0.2,4))
+dataMatrix <- matrix(rnorm(400),nrow = 40)
+image(1:10,1:40,t(dataMatrix)[,nrow(dataMatrix):1])
+```
+
+```{r}
+par(mar = rep(0.2,4)) # add maragins to par
+heatmap(dataMatrix)
+```
+
+what if we add a pattern ?
+
+```{r}
+set.seed(678910)
+for (i in 1:20) {
+  # flip coin
+  coinflip <- rbinom(1,size = 1,prob = 0.5)
+  # if coin is heads add a common pattern to that row
+  if(coinflip)
+  {
+    dataMatrix[i,] <- dataMatrix[i,] + rep(c(0,3),each = 5) 
+  }
+}
+par(mar = rep(0.2,4))
+image(1:10,1:40,t(dataMatrix)[,nrow(dataMatrix):1])
+```
+
+```{r}
+heatmap(dataMatrix)
+```
+
+**patterns in rows and columns**
+
+```{r}
+hh <- hclust(dist(dataMatrix))
+dataMatrixOrdered <- dataMatrix[hh$order,]
+par(mar = rep(0.2,4))
+image(t(dataMatrixOrdered)[,nrow(dataMatrixOrdered):1])
+plot(rowMeans(dataMatrixOrdered),40:1,xlab = "row mean",
+     ylab = "Row" ,pch = 19)
+plot(rowMeans(dataMatrixOrdered),xlab = "columns",
+     ylab = "column means" ,pch = 19)
+```
+
+### svd
+
+if x matrix with each variable in column and each observation in row then the svd is matrix decomposition $UDV^T$
+
+where the columns of U are orthogonal (left singular vectors ) ,the columns of V are orthogonal (right singular vectors ) and D is a diagonal matrix singular values
+
+components of the SVD -*u* and *v*
+
+```{r}
+# scale for normalization
+svd1 <- svd(scale(dataMatrixOrdered))
+par(mar = rep(0.2,4))
+image(t(dataMatrixOrdered)[,nrow(dataMatrixOrdered):1])
+plot(svd1$u[,1],40:1,xlab = "row", ylab ="first left singular vector" , pch = 19)
+plot(svd1$v[,1],xlab = "column", ylab ="first right singular vector" , pch = 19)
+```
+
+components of the SVD - variance explained
+
+```{r}
+par(mfrow = c(1,2))
+plot(svd1$d,xlab ="columns", ylab = "singular value" , pch =19)
+plot(svd1$d^2 / sum(svd1$d^2) , xlab = "columns" ,ylab ="prop of variance explained  " ,pch = 19)
+```
+
+### PCA
+
+the principal components are equal to the right singular values if you first scale
+
+( subtract the mean , divide by the standard deviation ) the variables.
+
+```{r}
+svd1 <- svd(scale(dataMatrixOrdered))
+pcal <- prcomp(dataMatrixOrdered,scale = TRUE)
+plot(pcal$rotation[,1],svd1$v[,1],pch = 19,xlab = "principal 
+     component 1", ylab = " right singular vector 1")
+abline(0,1)
+```
+
+**MIssing Values**
+
+```{r}
+dataMatrix2 <- dataMatrixOrdered
+## randomaly insert some missing data
+dataMatrix2[sample((1:100),size = 40 , replace = FALSE)] <- NA
+#svd1 <- svd(scale(dataMatrix2)) # doesn't work
+```
+
+Imputing{impute }
+
+try with tidyr::complete
+
+```{r eval=FALSE}
+
+dataMatrix2 <- dataMatrixOrdered
+## randomaly insert some missing data
+dataMatrix2[sample((1:100),size = 40 , replace = FALSE)] <- NA
+dataMatrix3 <- as.matrix(tidyr::complete(as.data.frame(dataMatrix2)))
+svd1 <- svd(scale(dataMatrix3))
+plot(svd1$v[,1],pch =19)
+```
+
+
+
+
+

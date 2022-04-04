@@ -1,0 +1,679 @@
+---
+title: "1_Markdown"
+author: "Bakro"
+date: "10/19/2021"
+output: rmdformats::readthedown  
+theme:   Cayman
+params:
+   state: "hawaii"
+---
+
+# Markdown
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(shiny)
+library(ggplot2)
+library(tidyverse)
+```
+
+***What is rmarkdown?***
+
+-   .Rmd files · Develop your code and ideas side-by-side in a single document. Run code as
+
+    individual chunks or as an entire document.
+
+-   Dynamic Documents · Knit together plots, tables, and results with narrative text. Render to a variety of
+
+formats like HTML, PDF, MS Word,Dashboard or MS Powerpoint
+
+-   Reproducible Research · Upload, link to, or attach your report to share.Anyone can read
+
+    or run your code to reproduce your work.
+
+```{=html}
+<style>
+
+div.red { background-color:#ff00ff; border-radius: 5px; padding: 20px;}
+div.green { background-color:#00ff00; border-radius: 5px; padding: 20px;}
+
+</style>
+```
+::: {style="font-family:verdana;"}
+    Font-Family: Verdana, Cursive 
+    Colors Used: ['crimson', 'orange', #202EF9, #FE1C0A, #159364] 
+    Emoji Used: [📚, 📌, 😃, 💬, 📎, 🏆, 🔭, 🌈, 💭, ⏳, 🙌 ✔️   ☑️]  
+:::
+
+<p style="font-size:15px; font-family:verdana; line-height: 1.7em">
+
+This notebook is created for people who want to make their notebooks look [āesthetic]{style="color:crimson;"} and more pleasing to the viewer. We are [not]{style="color:crimson;"} going to solve any machine learning problem in this notebook (you can check my other notebooks for ML and EDA). We will only focus on the [HTML & Markdown]{style="color:crimson;"} to make your notebooks looks prettier and beutiful 🙌🏻 .
+
+</p>
+
+<br>
+
+::: {.alert .alert-block .alert-info style="font-size:14px; font-family:verdana; line-height: 1.7em;"}
+📌   Please keep in mind that, I am a beginner and on my learning journey as most of you. I just want to share something that will be useful for many kagglers working hard on their notebooks. If you find this notebook useful in anyway, please upvote it so that it can reach a bigger audience. You can share it with your fellow kagglers.
+:::
+
+**Workflow**
+
+1.  Open a new .Rmd file in the RStudio IDE by going to File \> New File \> R Markdown.
+
+2.  Embed code in chunks. Run code by line, by chunk, or all at once.
+
+3.  Write text and add tables, figures, images, and citations. Format with
+
+    Markdown syntax or the RStudio Visual Markdown Editor.
+
+4.  Set output format(s) and options in the YAML header. Customize themes or
+
+<!-- -->
+
+    add parameters to execute or add interactivity with Shiny.
+
+5.  Save and render the whole document. Knit periodically to preview your work as you write.
+
+6.  Share your work!
+
+## Take tour in rmd :
+
+✔️ **new file**
+
+✔️ **CODE CHUNKS**
+
+```{r chunk-label, include=FALSE}
+summary(mtcars)
+knitr::opts_chunk$set(message = FALSE)
+```
+
+✔️ **SET GLOBAL OPTIONS**
+
+Set options for the entire document in the first chunk.
+
+```{r include=FALSE}
+#knitr::opts_chunk$set(message = FALSE)
+
+```
+
+✔️ **INLINE CODE**
+
+Insert `r nrow(diamonds)` into text sections. Code is evaluated
+
+at render and results appear as text. "Built with r nrow(diamonds) "
+
+✔️ **save and render**
+
+✔️ **see visual editor**
+
+✔️ **see outline**
+
++------------------------+-----------+----------------------------------------------------------------------+
+| OPTION                 | DEFAULT   | EFFECT                                                               |
++========================+===========+======================================================================+
+| echo                   | TRUE      | display code in output document                                      |
++------------------------+-----------+----------------------------------------------------------------------+
+| error                  | FALSE     | TRUE (display error messages in doc)                                 |
+|                        |           |                                                                      |
+|                        |           | FALSE (stop render when error occurs)                                |
++------------------------+-----------+----------------------------------------------------------------------+
+| eval                   | TRUE      | run code in chunk                                                    |
++------------------------+-----------+----------------------------------------------------------------------+
+| include                | TRUE      | include chunk in doc after running                                   |
++------------------------+-----------+----------------------------------------------------------------------+
+| message                | TRUE      | display code messages in document                                    |
++------------------------+-----------+----------------------------------------------------------------------+
+| warning                | TRUE      | display code warnings in document                                    |
++------------------------+-----------+----------------------------------------------------------------------+
+| results                | "markup"  | "asis" (passthrough results)                                         |
+|                        |           |                                                                      |
+|                        |           | "hide" (don't display results)                                       |
+|                        |           |                                                                      |
+|                        |           | "hold" (put all results below all code)                              |
++------------------------+-----------+----------------------------------------------------------------------+
+| fig.align              | "default" | "left", "right", or "center"                                         |
++------------------------+-----------+----------------------------------------------------------------------+
+| fig.alt                | NULL      | alt text for a figure                                                |
++------------------------+-----------+----------------------------------------------------------------------+
+| fig.cap                | NULL      | figure caption as a character string                                 |
++------------------------+-----------+----------------------------------------------------------------------+
+| fig.path               | "figure/" | prefix for generating figure file paths                              |
++------------------------+-----------+----------------------------------------------------------------------+
+| fig.width & fig.height | 7         | plot dimensions in inches                                            |
++------------------------+-----------+----------------------------------------------------------------------+
+| out.width              |           | rescales output width, e.g. "75%", "300px"                           |
++------------------------+-----------+----------------------------------------------------------------------+
+| collapse               | FALSE     | collapse all sources & output into a single block                    |
++------------------------+-----------+----------------------------------------------------------------------+
+| comment "\#\#"         |           | include or exclude a code chunk when prefix for each line of results |
++------------------------+-----------+----------------------------------------------------------------------+
+| child                  | NULL      | files(s) to knit and then include                                    |
++------------------------+-----------+----------------------------------------------------------------------+
+| purl                   | TRUE      | extracting source code with knitr::purl()                            |
++------------------------+-----------+----------------------------------------------------------------------+
+
+**Insert Tables**
+
+Output data frames as tables using kable(data, caption).
+
+```{r}
+data <- faithful[1:4, ]
+knitr::kable(data,
+caption = "Table with kable")
+```
+
+## Write with Markdown
+
+✔️ Plain text.
+
+✔️ End a line with two spaces to start a new paragraph.
+
+✔️ Also end with a backslash\\ to make a new line.
+
+✔️ *italisc* and **bold**
+
+✔️ superscript\^2\^/subscript\~2\~
+
+✔️ \~~~strikethrough~~
+
+✔️ escaped: \* \_ \\
+
+✔️ endash: --, emdash: ---
+
+✔️ \# Header 1
+
+✔️ \#\# Header 2
+
+✔️ \#\#\#\#\#\# Header 6
+
+✔️ - unordered list
+
+-   item 2
+
+-   item 2a (indent 1 tab)
+
+-   item 2b
+
+✔️ 1. ordered list
+
+2.  item 2
+
+-   item 2a (indent 1 tab)
+
+-   item 2b
+
+✔️<link url> [This is a link.](link%20url)
+
+✔️ [This is another link][id].
+
+
+
+✔️ `verbatim code`
+
+✔️ multiple lines
+
+     of verbatim code
+
+✔️ \> block quotes
+
+✔️equation: \$e\^{i /pi} + 1 = 0\$
+
+✔️equation block:
+
+✔️ \$\$E = mc\^{2}\$\$
+
+HTML Tabsets
+
+## Results {.tabset}
+
+### Plots text text
+
+### Tables more text
+
+## output
+
+| OUTPUT FORMAT                                | CREATES              |
+|----------------------------------------------|----------------------|
+| html_document                                | .html                |
+| pdf_document                                 | \* .pdf              |
+| word_document Microsoft Word                 | (.docx)              |
+| powerpoint_presentation Microsoft Powerpoint | (.pptx)              |
+| odt_document OpenDocument                    | Text                 |
+| rtf_document Rich Text Format                | .rtf                 |
+| md_document Markdown                         | .md                  |
+| github_document                              | Markdown for Github  |
+| ioslides_presentation                        | ioslides HTML slides |
+| slidy_presentation                           | Slidy HTML slides    |
+| beamer_presentation                          | \* Beamer slides     |
+
++----------------------------------------------------------+
+| Requires LaTeX, use tinytex::install_tinytex()           |
+|                                                          |
+| Also see flexdashboard, bookdown, distill, and blogdown. |
++----------------------------------------------------------+
+
++==========================================================+ +----------------------------------------------------------+
+
+## params
+
+1.  Add parameters in the header as sub-values of params.
+2.  Call parameters in code using params\$\<name\>.
+3.  Set parameters with Knit with Parameters or the params argument of render().
+
+## REUSABLE TEMPLATES
+
+1\. Create a new package with a inst/rmarkdown/
+
+templates directory.
+
+2\. Add a folder containing template.yaml (below)
+
+and skeleton.Rmd (template contents).
+
+------------------------------------------------------------------------
+
+name: "My Template"
+
+------------------------------------------------------------------------
+
+3\. Install the package to access template by going to
+
+File \> New R Markdown \> From Template.
+
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| Col1                           | Col2                                                                                 | html | pdf | word | pptx |
++================================+======================================================================================+======+=====+======+======+
+| anchor_sections                | Show section anchors on mouse hover (TRUE or FALSE)                                  | X    |     |      |      |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| citation_package               | The LaTeX package to process citations ("default", "natbib", "biblatex") X           |      | X   |      |      |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| code_download                  | Give readers an option to download the .Rmd source code (TRUE or FALSE) X            | X    |     |      |      |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| code_folding                   | Let readers to toggle the display of R code ("none", "hide", or "show")              | X    |     |      |      |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| css                            | CSS or SCSS file to use to style document (e.g. "style.css") X                       | X    |     |      |      |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| dev                            | Graphics device to use for figure output (e.g. "png", "pdf")                         | X    | X   |      |      |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| df_print                       | Method for printing data frames ("default", "kable", "tibble", "paged")              | X    | X   | X    | X    |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| fig_caption                    | Should figures be rendered with captions (TRUE or FALSE)                             | X    | X   | X    | X    |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| highlight                      | Syntax highlighting ("tango", "pygments", "kate", "zenburn", "textmate")             | X    | X   | X    |      |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| includes                       | File of content to place in doc ("in_header", "before_body", "after_body")           | X    | X   |      |      |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| keep_md                        | Keep the Markdown .md file generated by knitting (TRUE or FALSE)                     | X    | X   | X    | X    |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| keep_tex                       | Keep the intermediate TEX file used to convert to PDF (TRUE or FALSE)                |      | X   |      |      |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| latex_engine                   | LaTeX engine for producing PDF output ("pdflatex", "xelatex", or "lualatex")         |      | X   |      |      |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| reference_docx/\_doc docx/pptx | file containing styles to copy in the output (e.g. "file.docx", "file.pptx")         |      |     | X    | X    |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| theme                          | Theme options (see Bootswatch and Custom Themes below)                               | X    |     |      |      |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| toc                            | Add a table of contents at start of document (TRUE or FALSE)                         | X    | X   | X    | X    |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| toc_depth                      | The lowest level of headings to add to table of contents (e.g. 2, 3)                 | X    | X   | X    | X    |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+| toc_float                      | Float the table of contents to the left of the main document content (TRUE or FALSE) | X    |     |      |      |
++--------------------------------+--------------------------------------------------------------------------------------+------+-----+------+------+
+
+**BOOTSWATCH THEMES**
+
+Customize HTML documents with Bootswatch themes from the bslib package using the theme
+
+output option.Use bslib::bootswatch_themes() to list available themes.
+
+<div>
+
+------------------------------------------------------------------------
+
+output:
+
+html_document:
+
+theme:
+
+bootswatch: solar
+
+------------------------------------------------------------------------
+
+</div>
+
+CUSTOM THEMES
+
+Customize individual HTML elements using bslib
+
+variables. Use ?bs_theme to see more variables.
+
+<div>
+
+------------------------------------------------------------------------
+
+output:
+
+html_document:
+
+theme:
+
+bg: "\#121212"
+
+fg: "\#E4E4E4"
+
+base_font:
+
+google: "Prompt"
+
+------------------------------------------------------------------------
+
+</div>
+
+More on bslib at pkgs.rstudio.com/bslib/.
+
+## STYLING WITH CSS AND SCSS
+
+Add CSS and SCSS to your document by adding a
+
+path to a file with the css option in the YAML header.
+
+<div>
+
+title: "My Document"
+
+author: "Author Name"
+
+output:
+
+html_document:
+
+css: "style.css"
+
+------------------------------------------------------------------------
+
+</div>
+
+Apply CSS styling by writing HTML tags directly or:
+
+• Use markdown to apply style attributes inline.
+
+<div>
+
+Bracketed Span
+
+A [green]{.my-color} word.
+
+Fenced Div
+
+::: {.my-color}
+All of these words
+
+are green.
+:::
+
+</div>
+
+## Render
+
+When you render a document, rmarkdown:
+
+1\. Runs the code and embeds results and text into an .md file with knitr.
+
+2\. Converts the .md file into the output format with Pandoc.
+
+Save, then Knit to preview the document output.
+
+The resulting HTML/PDF/MS Word/etc. document will be created and saved in the same directory as
+
+the .Rmd file.Use rmarkdown::render() to render/knit in the R
+
+console. See ?render for available options.
+
+## Share
+
+Publish on RStudio Connectto share R Markdown documents
+
+securely, schedule automaticupdates, and interact with parameters in real time.
+
+rstudio.com/products/connect/
+
+## INTERACTIVITY
+
+1\. Add runtime: shiny to the YAML header.
+
+2\. Call Shiny input functions to embed input objects.
+
+3\. Call Shiny render functions to embed reactiveoutput.
+
+4\. Render with rmarkdown::run() or click Run Document in RStudio IDE.
+
+<div>
+
+Also see Shiny Prerendered for better performance.
+
+rmarkdown.rstudio.com/
+
+authoring_shiny_prerendered
+
+Embed a complete app into your document with
+
+shiny::shinyAppDir(). More at bookdown.org/yihui/
+
+rmarkdown/shiny-embedded.html.
+
+</div>
+
+## **Bookdown**
+
+Maybe you want to write a technical book, or maybe your paper/write-up is so big that you need to split it into chapters. bookdown is an R package which allows you to construct a book structure to your output. You can write your chapters in separate R Markdown files headed with \# level headings. You can employ an easy reference format to reference a bibliography or other other sections, chapters, figures or tables. You can then render the entire book in some neat HTML formats like Gitbook or Bootstrap, or you can render it as a pdf or epub format. Here's an example of a recent book I wrote in Gitbook and in Bootstrap 4 (development version of bookdown). More on bookdown here.
+
+```{r}
+#library(bookdown)
+#library(downlit)
+#bookdown::bs4_book()
+```
+
+```{r}
+#browseURL("https://bookdown.org/yihui/rmarkdown-cookbook/notebook.html")
+```
+
+## interactive graphics
+
+Use interactive graphics in your documents by embedding \`plotly\`
+
+It's a really effective teaching tool to allow your readers to interact
+
+with your data or graphics as part of your R markdown documents.
+
+Personally I love \`plotly\` for generating interactive graphics in 2D and
+
+3D. You can insert plotly code into a code chunk in an R Markdown
+
+document (it can be coded in R or Python --- see Point 3), and this will
+
+generate a beautiful graphic that the reader can interact with to see
+
+data points, rotate, or whatever. Here's an example. More on \`plotly\`
+
+[here](%5Bhttps://plotly.com/r/).](<https://plotly.com/r/>).)
+
+```{r}
+library(plotly)
+
+library(gapminder)
+
+p <- gapminder %>%
+  
+    filter(year==1977) %>%
+  
+    ggplot( aes(gdpPercap, lifeExp, size = pop, color=continent)) +
+  
+    geom_point() +
+  
+    scale_x_log10() +
+  
+    theme_bw()
+
+
+
+ggplotly(p)
+```
+
+```{r}
+library(DT)
+
+datatable(mtcars, rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T) )
+```
+
+::: {.red}
+-   This is my first conclusion
+
+-   This is my second conclusion
+:::
+
+**Presentations**
+
+Presentations work by dividing your content into slides, with a new slide beginning at each first (`#`) or second (`##`) level header. You can also insert a horizontal rule (`***`) to create a new slide without a header. R Markdown comes with three presentation formats built-in:
+
+1.  `ioslides_presentation` - HTML presentation with ioslides
+
+2.  `slidy_presentation` - HTML presentation with W3C Slidy
+
+3.  `beamer_presentation` - PDF presentation with LaTeX Beamer.
+
+    ## **Dashboards**
+
+    Dashboards are a useful way to communicate large amounts of information visually and quickly. Flexdashboard makes it particularly easy to create dashboards using R Markdown and a convention for how the headers affect the layout:
+
+    -   Each level 1 header (`#`) begins a new page in the dashboard.
+
+    -   Each level 2 header (`##`) begins a new column.
+
+    -   Each level 3 header (`###`) begins a new row.
+
+```{r}
+# ---
+# title: "Diamonds distribution dashboard"
+# output: flexdashboard::flex_dashboard
+# ---
+# 
+# library(ggplot2)
+# library(dplyr)
+# knitr::opts_chunk$set(fig.width = 5, fig.asp = 1/3)
+# 
+#  ## Column 1
+# ### Carat
+#  ggplot(diamonds, aes(carat)) + geom_histogram(binwidth = 0.1)
+# 
+# ### Cut
+# ggplot(diamonds, aes(cut)) + geom_bar()
+# ### Colour
+# ggplot(diamonds, aes(color)) + geom_bar()
+# ## Column 2
+# ### The largest diamonds
+#             diamonds %>% 
+#               arrange(desc(carat)) %>% 
+#               head(100) %>% 
+#               select(carat, cut, color, price) %>% 
+#               DT::datatable()
+```
+
+Shiny
+
+```{r}
+
+
+theme_set(theme_minimal())
+
+ui <- fluidPage(
+  #Create input for domain (single) and variable (multiple)
+  selectInput("domain", "Domain", choices = ""),
+  selectInput("varSelection", "Choose 2 or 3 variables", multiple = T, choices = ""),
+  
+  #Set plot for output
+  plotOutput("myPlot")
+)
+
+server <- function(input, output, session) {
+  
+  #Load your data
+  df <- tibble(d = c(1,1,2,2),
+               year = c(2015, 2016, 2015, 2016),
+               v1 = c(3,5,4,10),
+               v2 = c(7,11,13,18),
+               v3 = c(1,2,3,4))
+  
+  #Update the domain input according to the data
+  updateSelectInput(session, "domain", choices = sort(unique(df$d)))
+  
+  #Update the variable list (assumed all but d and year are variables of interest)
+  updateSelectInput(session, "varSelection", 
+                    choices = colnames(df %>% select(-d, -year)))
+  
+  #Load the chart function
+  draw_chart <- function(df, listv, d){
+    df2 <- df %>%
+      gather("variable", "value", 3:5)
+    df3 <- df2 %>%
+      filter(variable %in% listv)
+    
+    df4 <- df3 %>%
+      group_by(d, year) %>%
+      summarise(value = mean(value)) %>%
+      mutate(variable = "m")
+    
+    df5 <- bind_rows(df3, df4) 
+    
+    df5 <- df5 %>%
+      mutate(year = as.character(year)) %>%
+      mutate(year = as.Date(year, "%Y"))
+    
+    df5 <- df5 %>%
+      mutate(year = lubridate::year(year))
+    
+    df5 <- df5 %>%
+      filter(d == 1)
+    # format(df5$year, "%Y")
+    # Visualization
+    ggplot(df5, aes(x = year, y = value)) + 
+      geom_line(aes(color = variable, linetype = variable)) + 
+      scale_color_discrete() +
+      scale_x_continuous(breaks = c(2015,2016))
+  }
+  
+  #Render the plot
+  output$myPlot = renderPlot({
+    #Only render if there are 2 or 3 variables selected
+    req(between(length(input$varSelection), 2, 3))
+    draw_chart(df, input$varSelection, input$domain)
+  })
+  
+}
+
+shinyApp(ui, server)
+```
+
+## Reproducable search
+
+-   replication of my study
+
+<!-- -->
+
+    **An investigator at another institution conducts a study addressing the same question, collects her own data, analyzes it separately from me, and publishes her own findings.**
+
+-   reproducible :
+
+    **The full computer code for doing the data analysis is made publicly available**
+
+-   Which of the following is a reason that a study might NOT be fully replicated?
+
+    **he original study was very expensive and there is no money to repeat it in a different setting.**
+
+-   Which of the following is a reason why publishing reproducible research is increasingly important?
+
+    **New technologies are increasing the rate of data collection, creating datasets that are more complex and extremely high dimensional.**

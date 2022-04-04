@@ -1,0 +1,176 @@
+---
+title: "regular_expressions"
+author: "Bakro"
+date: "12/31/2021"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+libraries
+
+```{r}
+library(stringr)
+```
+
+## regular expressions
+### matching characters
+```{r}
+example <- "abc ABC 123 .!?\\()\t{}\n"
+str_view_all(string = example , pattern = "a")
+str_view_all(string = example , pattern = "\\.") # special character .
+str_view_all(string = example , pattern = "\\!") # special character !
+str_view_all(string = example , pattern = "\\\\") # special character \
+str_view_all(string = example , pattern = "\\?") # special character ?
+str_view_all(string = example , pattern = "\\!") # special character !
+str_view_all(string = example , pattern = "\\)") # special character ) and so (,{,}
+str_view_all(string = example , pattern = "\\t") # tab
+str_view_all(string = example , pattern = "\\s") # whitespace
+str_view_all(string = example , pattern = "\\d") # any digit
+str_view_all(string = example , pattern = "\\w") # any word character
+str_view_all(string = example , pattern = "[:digit:]") # digits
+str_view_all(string = example , pattern = "[:alpha:]") # alphabet
+str_view_all(string = example , pattern = "[:lower:]") # lower alphabet
+str_view_all(string = example , pattern = "[:upper:]") # upper alphabet
+str_view_all(string = example , pattern = "[:alnum:]") # alpha or numberic
+str_view_all(string = example , pattern = "[:punct:]") # punct
+str_view_all(string = example , pattern = "[:graph:]") # alpha or numberic or punct
+str_view_all(string = example , pattern = "[:space:]") # space
+str_view_all(string = example , pattern = "[:blank:]") # blank
+str_view_all(string = example , pattern = ".") # character
+```
+
+### Anchors
+```{r}
+fruit <- c("apple","orange","kiwi","pear" ,"grapes")
+str_view(fruit, "^a") # begin_with a
+
+```
+
+```{r}
+str_view(fruit, "e$") # begin_with e
+```
+### Alternates
+```{r}
+str_view(c("abc", "a.c", "a*c", "a c"), "a[.]c")  # a.c
+```
+
+```{r}
+str_view(c("abc", "a.c", "a*c", "a c"), ".[*]c") # , any char than *c
+```
+
+```{r}
+str_view(c("grey", "gray"), "gr(e|a)y")  # or operator
+```
+
+```{r}
+str_view_all(example, "[abc]") # one of a,b,c
+str_view_all(example, "[a-z]") # lower range
+str_view_all(example, "[A-z]") # one of a,b,c
+str_view_all("food delicious" , "[^aieou]") # not in  a,e,i,o,u
+```
+
+
+### Quantifiers
+```{r}
+x <- "1888 is the longest year in Roman numerals: MDCCCLXXXVIII"
+str_view(x, "CC?")
+str_view(x, "CC+")
+str_view(x, 'C[LX]+')
+str_view(x, "C{2}")
+str_view(x, "C{2,}")
+str_view(x, "C{2,3}")
+str_view(x, 'C{2,3}?')
+str_view(x, 'C[LX]+?')
+```
+
+```{r}
+phone <- regex("
+  \\(?     # optional opening parens
+  (\\d{3}) # area code
+  [) -]?   # optional closing parens, space, or dash
+  (\\d{3}) # another three numbers
+  [ -]?    # optional space or dash
+  (\\d{3}) # three more numbers
+  ", comments = TRUE)
+
+str_match("514-791-8141", phone)
+```
+
+```{r}
+head(dir(pattern = "\\.Rmd$"))
+```
+
+## str_equal()
+
+str_equal(x, y, locale = "en", ignore_case =
+
+FALSE, ...)1 Determine if two strings are
+
+equivalent.
+
+```{r}
+all.equal(c("a", "b"), c("a", "c"))
+```
+
+## str_wrap()
+
+str_wrap(string, width = 80, indent = 0,
+
+exdent = 0) Wrap strings into nicely formatted
+
+paragraphs.
+
+```{r}
+str_wrap(sentences[1:4], 20)
+```
+
+## sprintf()
+
+```{r}
+
+count <- 5L
+coursename <- "daya analytics"
+sprintf(fmt = "Im Kurs %s sind %d Teilnehmer", coursename, count)
+```
+
+## clean text
+
+load text >> lower >> remove not alpha >> remove extra spaces
+```{r}
+Clean_String <- function(string){
+    # Lowercase
+    temp <- tolower(string)
+    # Remove everything that is not a number or letter (may want to keep more 
+    # stuff in your actual analyses). 
+    temp <- stringr::str_replace_all(temp,"[^a-zA-Z\\s]", "")
+    # Shrink down to just one white space
+    temp <- stringr::str_replace_all(temp,"[\\s]+", " ")
+    # Split it
+    temp <- stringr::str_split(temp, " ")[[1]]
+    # Get rid of trailing "" if necessary
+    indexes <- which(temp == "")
+    if(length(indexes) > 0){
+      temp <- temp[-indexes]
+    } 
+    return(temp)
+}
+```
+
+
+```{r}
+my_string <- "Example STRING, with example numbers (12, 15 and also 10.2)?!"
+temp_string <- Clean_String(my_string)
+## suppose i want to delete stop word
+stop_words <- c("I" ,"am" ,"I'm" ,"also" , "and" , "with")
+temp_string[!temp_string %in% stop_words] # remove stop words 
+```
+

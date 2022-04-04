@@ -24,4 +24,4 @@ classification , regression ,association , network , recommendation systems , ca
 Natural language processing in R
 ## 12_Production deal with shiny to publish app 
 
-![image](https://user-images.githubusercontent.com/87785202/161592739-c30c5b69-10ae-40e6-a400-b8ba546bb314.png)
+

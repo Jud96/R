@@ -1,5 +1,5 @@
 # R
-### welcome in Awesome R
+welcome in Awesome R
 This folder based on searching on google,articles,blogs and course form johns Hopkins university data science in R
 you find Case study in every document
 ## 1_programming and basics
